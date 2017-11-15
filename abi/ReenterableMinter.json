@@ -1,0 +1,23 @@
+[
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "_mint_id",
+          "type": "bytes32"
+        },
+        {
+          "name": "_to",
+          "type": "address"
+        },
+        {
+          "name": "_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "mint",
+      "outputs": [],
+      "payable": false,
+      "type": "function"
+    }
+]
