@@ -27,18 +27,32 @@ class ConfigurationBase(object):
     def __getitem__(self, key):
         return self._conf[key]
 
+    def __contains__(self, item):
+        return item in self._conf
+
     def get_provider(self):
         if not self._uses_web3:
             raise RuntimeError('web3 is not being used')
         return globals()[self._conf['web3_provider']['class']](*(self._conf['web3_provider']['args']))
 
-    def _check_addresses(self, addresses):
-        for address_name in addresses if isinstance(addresses, (list, tuple)) else (addresses, ):
-            if not self._conf.get(address_name):
-                raise ValueError(address_name + ' is not provided')
+    def _check_existence(self, names):
+        for name in names if isinstance(names, (list, tuple)) else (names, ):
+            if self._conf.get(name) is None:
+                raise ValueError(name + ' is not provided')
 
+    def _check_addresses(self, addresses):
+        self._check_existence(addresses)
+        for address_name in addresses if isinstance(addresses, (list, tuple)) else (addresses, ):
             if not Web3.isAddress(self._conf[address_name]):
                 raise ValueError(address_name + ' is incorrect')
+
+    def _check_ints(self, names):
+        self._check_existence(names)
+        for name in names if isinstance(names, (list, tuple)) else (names, ):
+            try:
+                int(self._conf[name])
+            except ValueError:
+                raise ValueError(name + ' is not an integer')
 
 
 class Conf(ConfigurationBase):
@@ -47,6 +61,9 @@ class Conf(ConfigurationBase):
         super().__init__(os.path.join(os.path.dirname(__file__), '..', 'conf', 'minter.conf'))
 
         self._check_addresses(('reenterable_minter_address', 'account_address'))
+
+        if 'require_confirmations' in self:
+            self._check_ints('require_confirmations')
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -65,12 +82,9 @@ def mint_tokens():
 
     gas_price = web3.eth.gasPrice
 
-    assert mint_id[0] == '0' and mint_id[1] == 'x'
-    mint_id_abi = bytearray.fromhex(mint_id[2:])
-
     tx_hash = _target_contract()\
         .transact({'from': conf['account_address'], 'gasPrice': gas_price})\
-        .mint(mint_id_abi, address, tokens)
+        .mint(Web3.toBytes(hexstr=mint_id), address, tokens)
 
     logging.debug('mint_tokens(): mint_id=%s, address=%s, tokens=%d, gas_price=%d: sent tx %s',
                   mint_id, address, tokens, gas_price, tx_hash)
@@ -80,7 +94,56 @@ def mint_tokens():
 @app.route('/getMintingStatus')
 def get_minting_status():
     mint_id = _get_mint_id()
-    raise NotImplementedError()
+
+    # вариант:
+    # проверить намайнена ли 6 блоков назад, если да -  успех
+    # найти транзакцию, если не нашлась -  не минтится либо node_syncing
+    # если failed (но не AlreadyMinted) - failed
+    # иначе минтится
+
+    # Checking if it was mined enough block ago.
+    if 'require_confirmations' in conf:
+        saved_default = web3.eth.defaultBlock
+        web3.eth.defaultBlock = max(0, web3.eth.blockNumber - int(conf['require_confirmations']))
+    else:
+        saved_default = None
+    try:
+        if _target_contract().call().m_processed_mint_id(Web3.toBytes(hexstr=mint_id)):
+            return '{"status": "minted"}'
+    finally:
+        if 'require_confirmations' in conf:
+            assert saved_default is not None
+            web3.eth.defaultBlock = saved_default
+
+    # предыдущий вариант
+
+    if _target_contract().call().m_processed_mint_id(Web3.toBytes(hexstr=mint_id)):
+        # mined
+
+        форк блокчейна во время этой проверки?
+        if 'require_confirmations' in conf:
+            # checking if there are enough confirmations
+            to_block = web3.eth.blockNumber
+            from_block = max(0, to_block - int(conf['require_confirmations']) + 1)
+
+            event_filter = _target_contract().eventFilter('MintSuccess',
+                    {'filter': {'mint_id': Web3.toBytes(hexstr=mint_id)}, 'fromBlock': from_block, 'toBlock': to_block})
+            try:
+                events = event_filter.get_all_entries()
+            finally:
+                event_filter.stop_watching()
+
+            assert len(events) <= 1
+            if events:
+                return '{"status": "minting"}'
+
+        return '{"status": "minted"}'
+
+    # иначе ищи в TxPool.content
+
+    # Eth.syncing?
+
+    # status failed?
 
 
 def _get_mint_id():

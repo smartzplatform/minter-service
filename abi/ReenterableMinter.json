@@ -3,15 +3,15 @@
       "constant": false,
       "inputs": [
         {
-          "name": "_mint_id",
+          "name": "mint_id",
           "type": "bytes32"
         },
         {
-          "name": "_to",
+          "name": "to",
           "type": "address"
         },
         {
-          "name": "_amount",
+          "name": "amount",
           "type": "uint256"
         }
       ],
@@ -19,5 +19,35 @@
       "outputs": [],
       "payable": false,
       "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "name": "m_processed_mint_id",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "name": "mint_id",
+          "type": "bytes32"
+        }
+      ],
+      "name": "MintSuccess",
+      "type": "event"
     }
 ]
