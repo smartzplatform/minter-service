@@ -2,3 +2,4 @@ web3
 
 # Flask python3-flask
 # PyYAML python3-yaml
+# redis python3-redis

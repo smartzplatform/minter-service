@@ -11,6 +11,9 @@ import yaml
 from web3 import Web3, HTTPProvider, IPCProvider
 from flask import Flask, abort, request
 
+import redis
+import redis.exceptions
+
 
 class ConfigurationBase(object):
 
@@ -29,6 +32,9 @@ class ConfigurationBase(object):
 
     def __contains__(self, item):
         return item in self._conf
+
+    def get(self, key, default):
+        return self._conf.get(key, default)
 
     def get_provider(self):
         if not self._uses_web3:
@@ -68,11 +74,20 @@ class Conf(ConfigurationBase):
         if 'gas_limit' in self:
             self._check_ints('gas_limit')
 
+        # TODO validate redis
+
+    def get_redis(self):
+        return redis.StrictRedis(
+                host=self.get('redis', {}).get('host', '127.0.0.1'),
+                port=self.get('redis', {}).get('port', 6379),
+                db=self.get('redis', {}).get('db', 0))
+
 
 logging.basicConfig(level=logging.DEBUG)
 
 conf = Conf()
 w3_instance = Web3(conf.get_provider())
+redis_instance = conf.get_redis()
 
 app = Flask(__name__)
 
@@ -88,22 +103,19 @@ def mint_tokens():
 
     tx_hash = _target_contract()\
         .transact({'from': conf['account_address'], 'gasPrice': gas_price, 'gas': gas_limit})\
-        .mint(Web3.toBytes(hexstr=mint_id), address, tokens)
+        .mint(mint_id, address, tokens)
+
+    # remembering tx hash for get_minting_status references - optional step
+    _silent_redis_call(redis_instance.lpush, _redis_mint_tx_key(mint_id), Web3.toBytes(hexstr=tx_hash))
 
     logging.debug('mint_tokens(): mint_id=%s, address=%s, tokens=%d, gas_price=%d, gas=%d: sent tx %s',
-                  mint_id, address, tokens, gas_price, gas_limit, tx_hash)
+                  Web3.toHex(mint_id), address, tokens, gas_price, gas_limit, tx_hash)
     return '{"success": true}'
 
 
 @app.route('/getMintingStatus')
 def get_minting_status():
     mint_id = _get_mint_id()
-
-    # вариант:
-    # проверить намайнена ли 6 блоков назад, если да -  успех
-    # найти транзакцию, если не нашлась -  не минтится либо node_syncing
-    # если failed - failed
-    # иначе минтится
 
     # Checking if it was mined enough block ago.
     if 'require_confirmations' in conf:
@@ -118,7 +130,10 @@ def get_minting_status():
         saved_default = None
 
     try:
-        if _target_contract().call().m_processed_mint_id(Web3.toBytes(hexstr=mint_id)):
+        if _target_contract().call().m_processed_mint_id(mint_id):
+            # TODO background eviction thread/process
+            _silent_redis_call(redis_instance.delete, _redis_mint_tx_key(mint_id))
+
             return '{"status": "minted"}'
     finally:
         if 'require_confirmations' in conf:
@@ -126,17 +141,50 @@ def get_minting_status():
             w3_instance.eth.defaultBlock = saved_default
 
     # Checking if it was mined recently (still subject to removal from blockchain!).
-    if _target_contract().call().m_processed_mint_id(Web3.toBytes(hexstr=mint_id)):
+    if _target_contract().call().m_processed_mint_id(mint_id):
         return '{"status": "minting"}'
 
-    raise NotImplementedError()
+    # finding all known transaction ids which could mint this mint_id
+    tx_bin_ids = _silent_redis_call(redis_instance.lrange, _redis_mint_tx_key(mint_id), 0, -1) or []
+
+    # getting transactions
+    txs = filter(None, (w3_instance.eth.getTransaction(Web3.toHex(tx_id)) for tx_id in tx_bin_ids))
+
+    # searching for failed transactions
+    for tx in txs:
+        if tx.blockNumber is None:
+            continue    # not mined yet
+
+        receipt = w3_instance.eth.getTransactionReceipt(tx.hash)
+        if receipt is None:
+            continue    # blockchain reorg?
+
+        if 0 == int(receipt.status, 16):
+            # If any of the transactions has failed, it's a very bad sign
+            # (failure due to reentrance should't be possible, see ReenterableMinter).
+            return '{"status": "failed"}'
+
+    if txs:
+        # There is still hope.
+        return '{"status": "minting"}'
+    else:
+        # Last chance - maybe we're out of sync?
+        if w3_instance.eth.syncing:
+            return '{"status": "node_syncing"}'
+
+        # There are no signs of minting - now its vise for client to re-mint this mint_id.
+        return '{"status": "not_minted"}'
 
 
 def _get_mint_id():
+    """
+    Extracts mint id from current request parameters.
+    :return: mint id (bytes)
+    """
     mint_id = request.args['mint_id']
     if '' == mint_id:
         abort(400, 'empty mint_id')
-    return Web3.sha3(text=mint_id)
+    return Web3.sha3(text=mint_id, encoding='bytes')
 
 
 def _get_address():
@@ -178,6 +226,25 @@ def _gas_limit():
 
     limit = int(w3_instance.eth.getBlock('latest').gasLimit * 0.9)
     return min(int(conf['gas_limit']), limit) if 'gas_limit' in conf else limit
+
+
+def _redis_mint_tx_key(mint_id):
+    """
+    Creating unique redis key for current minter contract and mint_id
+    :param mint_id: mint id (bytes)
+    :return: redis-compatible string
+    """
+    contract_address_bytes = Web3.toBytes(hexstr=conf['reenterable_minter_address'])
+    assert 20 == len(contract_address_bytes)
+    return Web3.sha3(contract_address_bytes + mint_id, encoding='bytes')
+
+
+def _silent_redis_call(call_fn, *args, **kwargs):
+    try:
+        return call_fn(*args, **kwargs)
+    except redis.exceptions.ConnectionError as exc:
+        logging.warning('could not contact redis: %s', exc)
+        return None
 
 
 if __name__ == '__main__':
