@@ -10,6 +10,12 @@ module.exports = {
       host: "localhost",
       port: 8547,
       network_id: 3
+    },
+
+    rinkeby: {  // testnet
+      host: "localhost",
+      port: 8547,
+      network_id: 4
     }
   }
 };

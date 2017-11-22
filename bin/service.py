@@ -65,11 +65,14 @@ class Conf(ConfigurationBase):
         if 'require_confirmations' in self:
             self._check_ints('require_confirmations')
 
+        if 'gas_limit' in self:
+            self._check_ints('gas_limit')
+
 
 logging.basicConfig(level=logging.DEBUG)
 
 conf = Conf()
-web3 = Web3(conf.get_provider())
+w3_instance = Web3(conf.get_provider())
 
 app = Flask(__name__)
 
@@ -80,14 +83,15 @@ def mint_tokens():
     address = _get_address()
     tokens = _get_tokens()
 
-    gas_price = web3.eth.gasPrice
+    gas_price = w3_instance.eth.gasPrice
+    gas_limit = _gas_limit()
 
     tx_hash = _target_contract()\
-        .transact({'from': conf['account_address'], 'gasPrice': gas_price})\
+        .transact({'from': conf['account_address'], 'gasPrice': gas_price, 'gas': gas_limit})\
         .mint(Web3.toBytes(hexstr=mint_id), address, tokens)
 
-    logging.debug('mint_tokens(): mint_id=%s, address=%s, tokens=%d, gas_price=%d: sent tx %s',
-                  mint_id, address, tokens, gas_price, tx_hash)
+    logging.debug('mint_tokens(): mint_id=%s, address=%s, tokens=%d, gas_price=%d, gas=%d: sent tx %s',
+                  mint_id, address, tokens, gas_price, gas_limit, tx_hash)
     return '{"success": true}'
 
 
@@ -98,52 +102,34 @@ def get_minting_status():
     # вариант:
     # проверить намайнена ли 6 блоков назад, если да -  успех
     # найти транзакцию, если не нашлась -  не минтится либо node_syncing
-    # если failed (но не AlreadyMinted) - failed
+    # если failed - failed
     # иначе минтится
 
     # Checking if it was mined enough block ago.
     if 'require_confirmations' in conf:
-        saved_default = web3.eth.defaultBlock
-        web3.eth.defaultBlock = max(0, web3.eth.blockNumber - int(conf['require_confirmations']))
+        confirmed_block = w3_instance.eth.blockNumber - int(conf['require_confirmations'])
+        if confirmed_block < 0:
+            # we are at the beginning of blockchain for some reason
+            return '{"status": "minting"}'
+
+        saved_default = w3_instance.eth.defaultBlock
+        w3_instance.eth.defaultBlock = confirmed_block
     else:
         saved_default = None
+
     try:
         if _target_contract().call().m_processed_mint_id(Web3.toBytes(hexstr=mint_id)):
             return '{"status": "minted"}'
     finally:
         if 'require_confirmations' in conf:
             assert saved_default is not None
-            web3.eth.defaultBlock = saved_default
+            w3_instance.eth.defaultBlock = saved_default
 
-    # предыдущий вариант
-
+    # Checking if it was mined recently (still subject to removal from blockchain!).
     if _target_contract().call().m_processed_mint_id(Web3.toBytes(hexstr=mint_id)):
-        # mined
+        return '{"status": "minting"}'
 
-        форк блокчейна во время этой проверки?
-        if 'require_confirmations' in conf:
-            # checking if there are enough confirmations
-            to_block = web3.eth.blockNumber
-            from_block = max(0, to_block - int(conf['require_confirmations']) + 1)
-
-            event_filter = _target_contract().eventFilter('MintSuccess',
-                    {'filter': {'mint_id': Web3.toBytes(hexstr=mint_id)}, 'fromBlock': from_block, 'toBlock': to_block})
-            try:
-                events = event_filter.get_all_entries()
-            finally:
-                event_filter.stop_watching()
-
-            assert len(events) <= 1
-            if events:
-                return '{"status": "minting"}'
-
-        return '{"status": "minted"}'
-
-    # иначе ищи в TxPool.content
-
-    # Eth.syncing?
-
-    # status failed?
+    raise NotImplementedError()
 
 
 def _get_mint_id():
@@ -179,7 +165,19 @@ def _abi(abi_name):
 
 @lru_cache(1)
 def _target_contract():
-    return web3.eth.contract(conf['reenterable_minter_address'], abi=_abi('ReenterableMinter'))
+    return w3_instance.eth.contract(conf['reenterable_minter_address'], abi=_abi('ReenterableMinter'))
+
+
+def _gas_limit():
+    # Strange behaviour was observed on Rinkeby with web3py 3.16:
+    # looks like web3py set default gas limit a bit above typical block gas limit and ultimately the transaction was
+    # completely ignored (getTransactionReceipt AND getTransaction returned None, and the tx was absent in
+    # eth.pendingTransactions).
+    # That's why 90% of the last block gasLimit should be a safe cap (I'd recommend to limit it further in conf file
+    # based on specific token case).
+
+    limit = int(w3_instance.eth.getBlock('latest').gasLimit * 0.9)
+    return min(int(conf['gas_limit']), limit) if 'gas_limit' in conf else limit
 
 
 if __name__ == '__main__':
