@@ -3,9 +3,10 @@
 import sys
 import os
 import json
-import re
 import logging
 from functools import lru_cache
+import copy
+import stat
 
 import yaml
 from web3 import Web3, HTTPProvider, IPCProvider
@@ -13,6 +14,10 @@ from flask import Flask, abort, request
 
 import redis
 import redis.exceptions
+
+sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
+
+from mixbytes.filelock import FileLock, WouldBlockError
 
 
 class ConfigurationBase(object):
@@ -47,10 +52,16 @@ class ConfigurationBase(object):
                 raise ValueError(name + ' is not provided')
 
     def _check_addresses(self, addresses):
-        self._check_existence(addresses)
+        self._check_strings(addresses)
         for address_name in addresses if isinstance(addresses, (list, tuple)) else (addresses, ):
             if not Web3.isAddress(self._conf[address_name]):
                 raise ValueError(address_name + ' is incorrect')
+
+    def _check_strings(self, names):
+        self._check_existence(names)
+        for name in names if isinstance(names, (list, tuple)) else (names, ):
+            if not isinstance(name, str):
+                raise TypeError('setting {} is not a string'.format(name))
 
     def _check_ints(self, names):
         self._check_existence(names)
@@ -60,12 +71,24 @@ class ConfigurationBase(object):
             except ValueError:
                 raise ValueError(name + ' is not an integer')
 
+    def _check_dirs(self, names, writable=False):
+        self._check_strings(names)
+        for name in names if isinstance(names, (list, tuple)) else (names, ):
+            dir_path = str(self._conf[name])
+            if not os.path.isdir(dir_path):
+                raise ValueError('setting {}: {} is not a directory'.format(name, dir_path))
+            if not os.access(dir_path, os.R_OK | os.X_OK):
+                raise ValueError('setting {}: directory {} is not readable'.format(name, dir_path))
+            if writable and not os.access(dir_path, os.W_OK):
+                raise ValueError('setting {}: directory {} is not writable'.format(name, dir_path))
+
 
 class Conf(ConfigurationBase):
 
     def __init__(self):
         super().__init__(os.path.join(os.path.dirname(__file__), '..', 'conf', 'minter.conf'))
 
+        self._check_dirs('data_directory')
         self._check_addresses(('reenterable_minter_address', 'account_address'))
 
         if 'require_confirmations' in self:
@@ -81,6 +104,53 @@ class Conf(ConfigurationBase):
                 host=self.get('redis', {}).get('host', '127.0.0.1'),
                 port=self.get('redis', {}).get('port', 6379),
                 db=self.get('redis', {}).get('db', 0))
+
+
+class State(object):
+
+    def __init__(self, filename, lock_shared=False):
+        self._filename = filename
+
+        self._lock = FileLock(filename + ".lock", non_blocking=True, shared=lock_shared)
+        try:
+            self._lock.lock()   # implicit unlock is at process termination
+        except WouldBlockError:
+            print('Can\'t acquire state lock: looks like another instance is running', sys.stderr)
+            sys.exit(1)
+
+        if os.path.isfile(filename):
+            with open(filename) as fh:
+                self._state = yaml.safe_load(fh)
+            self._created = False
+        else:
+            self._state = dict()
+            self._created = True
+
+        self._original = copy.deepcopy(self._state)
+
+
+    def __getitem__(self, key):
+        return self._state[key]
+
+    def __contains__(self, item):
+        return item in self._state
+
+    def get(self, key, default):
+        return self._state.get(key, default)
+
+
+    def save(self, sync=False):
+        if self._state == self._original:
+            return
+        with open(self._filename, 'w') as fh:
+            if self._created:
+                os.chmod(self._filename, stat.S_IRUSR | stat.S_IWUSR)
+
+            yaml.safe_dump(self._state, fh)
+
+            if sync:
+                fh.flush()
+                os.fsync(fh.fileno())
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -247,5 +317,13 @@ def _silent_redis_call(call_fn, *args, **kwargs):
         return None
 
 
+def _load_state(lock_shared=False):
+    return State(os.path.join(conf['data_directory'], 'state.yaml'), lock_shared)
+
+
 if __name__ == '__main__':
-    app.run()
+    if len(sys.argv) > 1 and 'init_account' == sys.argv[1]:
+        state = _load_state()
+        raise NotImplementedError()
+    else:
+        app.run()
