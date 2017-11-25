@@ -20,7 +20,7 @@ class FileLock(object):
 
     def lock(self):
         assert self._fd is None
-        fd = os.open(self._filename, os.O_RDWR | os.O_CREAT | os.O_TRUNC)
+        fd = os.open(self._filename, os.O_RDWR | os.O_CREAT | os.O_TRUNC, 0o600)
 
         try:
             operation = ((fcntl.LOCK_SH if self._shared else fcntl.LOCK_EX)
