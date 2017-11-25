@@ -68,8 +68,7 @@ class State(object):
         try:
             self._lock.lock()   # implicit unlock is at process termination
         except WouldBlockError:
-            print('Can\'t acquire state lock: looks like another instance is running', sys.stderr)
-            sys.exit(1)
+            _fatal('Can\'t acquire state lock: looks like another instance is running')
 
         if os.path.isfile(filename):
             with open(filename) as fh:
@@ -85,11 +84,19 @@ class State(object):
     def __getitem__(self, key):
         return self._state[key]
 
+    def __setitem__(self, key, value):
+        self._state[key] = value
+
     def __contains__(self, item):
         return item in self._state
 
     def get(self, key, default):
         return self._state.get(key, default)
+
+
+    @property
+    def account_address(self):
+        return self.get('account', dict()).get('address')
 
 
     def save(self, sync=False):
@@ -99,14 +106,12 @@ class State(object):
             if self._created:
                 os.chmod(self._filename, stat.S_IRUSR | stat.S_IWUSR)
 
-            yaml.safe_dump(self._state, fh)
+            yaml.safe_dump(self._state, fh, default_flow_style=False)
 
             if sync:
                 fh.flush()
                 os.fsync(fh.fileno())
 
-
-logging.basicConfig(level=logging.DEBUG)
 
 conf = Conf()
 w3_instance = Web3(conf.get_provider())
@@ -205,9 +210,14 @@ def _get_mint_id():
     :return: mint id (bytes)
     """
     mint_id = request.args['mint_id']
-    if '' == mint_id:
+    assert isinstance(mint_id, (str, bytes))
+    if isinstance(mint_id, str):
+        mint_id = mint_id.encode('utf-8')
+
+    if 0 == len(mint_id):
         abort(400, 'empty mint_id')
-    return Web3.sha3(text=mint_id, encoding='bytes')
+
+    return Web3.toBytes(Web3.sha3(mint_id))
 
 
 def _get_address():
@@ -259,7 +269,7 @@ def _redis_mint_tx_key(mint_id):
     """
     contract_address_bytes = Web3.toBytes(hexstr=conf['reenterable_minter_address'])
     assert 20 == len(contract_address_bytes)
-    return Web3.sha3(contract_address_bytes + mint_id, encoding='bytes')
+    return Web3.toBytes(Web3.sha3(contract_address_bytes + mint_id))
 
 
 def _silent_redis_call(call_fn, *args, **kwargs):
@@ -270,13 +280,31 @@ def _silent_redis_call(call_fn, *args, **kwargs):
         return None
 
 
+def _fatal(message, *args):
+    print(message.format(*args), file=sys.stderr)
+    sys.exit(1)
+
+
 def _load_state(lock_shared=False):
     return State(os.path.join(conf['data_directory'], 'state.yaml'), lock_shared)
 
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and 'init_account' == sys.argv[1]:
+        logging.basicConfig(level=logging.INFO)
         state = _load_state()
-        raise NotImplementedError()
+        if state.account_address is not None:
+            _fatal('Account is already initialized (address: {})', state.account_address)
+
+        password = Web3.sha3(os.urandom(100))[2:42]
+        address = w3_instance.personal.newAccount(password)
+        state['account'] = {
+            'password': password,
+            'address': address,
+        }
+        state.save(True)
+        print('Generated new account: {}'.format(address))
+
     else:
+        logging.basicConfig(level=logging.DEBUG)
         app.run()
