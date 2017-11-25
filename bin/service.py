@@ -7,6 +7,7 @@ import logging
 from functools import lru_cache
 import copy
 import stat
+from time import sleep
 
 import yaml
 from web3 import Web3, HTTPProvider, IPCProvider
@@ -28,7 +29,6 @@ class Conf(ConfigurationBase):
         self._uses_web3 = True
 
         self._check_dirs('data_directory')
-        self._check_addresses(('reenterable_minter_address', ))
 
         if 'require_confirmations' in self:
             self._check_ints('require_confirmations')
@@ -111,6 +111,16 @@ class State(object):
     def account_address(self):
         return self.get('account', dict()).get('address')
 
+    def get_account_address(self):
+        if self.account_address is None:
+            raise RuntimeError('account was not initialized')
+        return self.account_address
+
+    def get_minter_contract_address(self):
+        if 'minter_contract' not in self:
+            raise RuntimeError('contract was not deployed')
+        return self['minter_contract']
+
 
     def save(self, sync=False):
         assert self._lock is not None
@@ -141,14 +151,11 @@ def mint_tokens():
     address = _get_address()
     tokens = _get_tokens()
 
-    from_address = app_state.account_address
-    if from_address is None:
-        raise RuntimeError('account was not initialized')
     gas_price = w3_instance.eth.gasPrice
     gas_limit = _gas_limit()
 
     tx_hash = _target_contract()\
-        .transact({'from': from_address, 'gasPrice': gas_price, 'gas': gas_limit})\
+        .transact({'from': app_state.get_account_address(), 'gasPrice': gas_price, 'gas': gas_limit})\
         .mint(mint_id, address, tokens)
 
     # remembering tx hash for get_minting_status references - optional step
@@ -257,14 +264,15 @@ def _validate_address(address):
 
 
 @lru_cache(128)
-def _abi(abi_name):
-    with open(os.path.join(os.path.dirname(__file__), '..', 'abi', abi_name + '.json')) as fh:
+def _built_contract(contract_name):
+    with open(os.path.join(os.path.dirname(__file__), '..', 'built_contracts', contract_name + '.json')) as fh:
         return json.load(fh)
 
 
 @lru_cache(1)
 def _target_contract():
-    return w3_instance.eth.contract(conf['reenterable_minter_address'], abi=_abi('ReenterableMinter'))
+    return w3_instance.eth.contract(app_state.get_minter_contract_address(),
+                                    abi=_built_contract('ReenterableMinter')['abi'])
 
 
 def _gas_limit():
@@ -285,7 +293,7 @@ def _redis_mint_tx_key(mint_id):
     :param mint_id: mint id (bytes)
     :return: redis-compatible string
     """
-    contract_address_bytes = Web3.toBytes(hexstr=conf['reenterable_minter_address'])
+    contract_address_bytes = Web3.toBytes(hexstr=app_state.get_minter_contract_address())
     assert 20 == len(contract_address_bytes)
     return Web3.toBytes(Web3.sha3(contract_address_bytes + mint_id))
 
@@ -327,14 +335,49 @@ if __name__ == '__main__':
 
         print('Generated new account: {}'.format(address))
 
+    elif len(sys.argv) > 1 and 'deploy_contract' == sys.argv[1]:
+        logging.basicConfig(level=logging.INFO)
+        if len(sys.argv) != 3:
+            _fatal('usage: {} deploy_contract <token_address>', sys.argv[0])
+        token_address = sys.argv[2]
+        if not Web3.isAddress(token_address):
+            _fatal('bad token address: {}', token_address)
+
+        gas_price = w3_instance.eth.gasPrice
+        gas_limit = int(w3_instance.eth.getBlock('latest').gasLimit * 0.9)
+
+        with _load_state() as state:
+            contract = w3_instance.eth.contract(abi=_built_contract('ReenterableMinter')['abi'],
+                                                bytecode=_built_contract('ReenterableMinter')['unlinked_binary'])
+
+            tx_hash = contract.deploy(transaction={'from': state.get_account_address(),
+                                                   'gasPrice': gas_price, 'gas': gas_limit},
+                                      args=[token_address])
+
+            print('Waiting for tx: ' + tx_hash)
+            logging.debug('deploy_contract: token_address=%s, gas_price=%d, gas=%d: sent tx %s',
+                          token_address, gas_price, gas_limit, tx_hash)
+
+            while True:
+                receipt = w3_instance.eth.getTransactionReceipt(tx_hash)
+                if receipt is not None:
+                    break
+                sleep(1)
+
+            address = receipt['contractAddress']
+            assert Web3.isAddress(address)
+
+            state['minter_contract'] = address
+            state.save(True)
+
+            print('ReenterableMinter deployed at: ' + address)
+
     else:
         logging.basicConfig(level=logging.DEBUG)
 
         with _load_state(lock_shared=True) as state:
             globals()['app_state'] = state
 
-            if state.account_address is None:
-                raise RuntimeError('account was not initialized')
-            w3_instance.personal.unlockAccount(state['account']['address'], state['account']['password'])
+            w3_instance.personal.unlockAccount(state.get_account_address(), state['account']['password'])
 
             app.run()
