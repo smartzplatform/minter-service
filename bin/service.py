@@ -28,7 +28,7 @@ class Conf(ConfigurationBase):
         self._uses_web3 = True
 
         self._check_dirs('data_directory')
-        self._check_addresses(('reenterable_minter_address', 'account_address'))
+        self._check_addresses(('reenterable_minter_address', ))
 
         if 'require_confirmations' in self:
             self._check_ints('require_confirmations')
@@ -81,16 +81,29 @@ class State(object):
         self._original = copy.deepcopy(self._state)
 
 
+    def __enter__(self):
+        assert self._lock is not None, "reuse is not possible"
+        return self     # already locked
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._lock.unlock()
+        self._lock = None
+
+
     def __getitem__(self, key):
+        assert self._lock is not None
         return self._state[key]
 
     def __setitem__(self, key, value):
+        assert self._lock is not None
         self._state[key] = value
 
     def __contains__(self, item):
+        assert self._lock is not None
         return item in self._state
 
     def get(self, key, default):
+        assert self._lock is not None
         return self._state.get(key, default)
 
 
@@ -100,6 +113,7 @@ class State(object):
 
 
     def save(self, sync=False):
+        assert self._lock is not None
         if self._state == self._original:
             return
         with open(self._filename, 'w') as fh:
@@ -118,6 +132,7 @@ w3_instance = Web3(conf.get_provider())
 redis_instance = conf.get_redis()
 
 app = Flask(__name__)
+app_state = None
 
 
 @app.route('/mintTokens')
@@ -126,11 +141,14 @@ def mint_tokens():
     address = _get_address()
     tokens = _get_tokens()
 
+    from_address = app_state.account_address
+    if from_address is None:
+        raise RuntimeError('account was not initialized')
     gas_price = w3_instance.eth.gasPrice
     gas_limit = _gas_limit()
 
     tx_hash = _target_contract()\
-        .transact({'from': conf['account_address'], 'gasPrice': gas_price, 'gas': gas_limit})\
+        .transact({'from': from_address, 'gasPrice': gas_price, 'gas': gas_limit})\
         .mint(mint_id, address, tokens)
 
     # remembering tx hash for get_minting_status references - optional step
@@ -292,19 +310,31 @@ def _load_state(lock_shared=False):
 if __name__ == '__main__':
     if len(sys.argv) > 1 and 'init_account' == sys.argv[1]:
         logging.basicConfig(level=logging.INFO)
-        state = _load_state()
-        if state.account_address is not None:
-            _fatal('Account is already initialized (address: {})', state.account_address)
 
-        password = Web3.sha3(os.urandom(100))[2:42]
-        address = w3_instance.personal.newAccount(password)
-        state['account'] = {
-            'password': password,
-            'address': address,
-        }
-        state.save(True)
+        with _load_state() as state:
+            if state.account_address is not None:
+                _fatal('Account is already initialized (address: {})', state.account_address)
+
+            password = Web3.sha3(os.urandom(100))[2:42]
+            address = w3_instance.personal.newAccount(password)
+            assert Web3.isAddress(address)
+
+            state['account'] = {
+                'password': password,
+                'address': address,
+            }
+            state.save(True)
+
         print('Generated new account: {}'.format(address))
 
     else:
         logging.basicConfig(level=logging.DEBUG)
-        app.run()
+
+        with _load_state(lock_shared=True) as state:
+            globals()['app_state'] = state
+
+            if state.account_address is None:
+                raise RuntimeError('account was not initialized')
+            w3_instance.personal.unlockAccount(state['account']['address'], state['account']['password'])
+
+            app.run()
