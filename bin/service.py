@@ -18,75 +18,14 @@ import redis.exceptions
 sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
 
 from mixbytes.filelock import FileLock, WouldBlockError
-
-
-class ConfigurationBase(object):
-
-    def __init__(self, filename, uses_web3=True):
-        self.filename = filename
-        self._uses_web3 = uses_web3
-
-        with open(filename) as fh:
-            self._conf = yaml.safe_load(fh)
-
-        if self._uses_web3 and self._conf['web3_provider']['class'] not in ('HTTPProvider', 'IPCProvider'):
-            raise TypeError('bad web3 provider')
-
-    def __getitem__(self, key):
-        return self._conf[key]
-
-    def __contains__(self, item):
-        return item in self._conf
-
-    def get(self, key, default):
-        return self._conf.get(key, default)
-
-    def get_provider(self):
-        if not self._uses_web3:
-            raise RuntimeError('web3 is not being used')
-        return globals()[self._conf['web3_provider']['class']](*(self._conf['web3_provider']['args']))
-
-    def _check_existence(self, names):
-        for name in names if isinstance(names, (list, tuple)) else (names, ):
-            if self._conf.get(name) is None:
-                raise ValueError(name + ' is not provided')
-
-    def _check_addresses(self, addresses):
-        self._check_strings(addresses)
-        for address_name in addresses if isinstance(addresses, (list, tuple)) else (addresses, ):
-            if not Web3.isAddress(self._conf[address_name]):
-                raise ValueError(address_name + ' is incorrect')
-
-    def _check_strings(self, names):
-        self._check_existence(names)
-        for name in names if isinstance(names, (list, tuple)) else (names, ):
-            if not isinstance(name, str):
-                raise TypeError('setting {} is not a string'.format(name))
-
-    def _check_ints(self, names):
-        self._check_existence(names)
-        for name in names if isinstance(names, (list, tuple)) else (names, ):
-            try:
-                int(self._conf[name])
-            except ValueError:
-                raise ValueError(name + ' is not an integer')
-
-    def _check_dirs(self, names, writable=False):
-        self._check_strings(names)
-        for name in names if isinstance(names, (list, tuple)) else (names, ):
-            dir_path = str(self._conf[name])
-            if not os.path.isdir(dir_path):
-                raise ValueError('setting {}: {} is not a directory'.format(name, dir_path))
-            if not os.access(dir_path, os.R_OK | os.X_OK):
-                raise ValueError('setting {}: directory {} is not readable'.format(name, dir_path))
-            if writable and not os.access(dir_path, os.W_OK):
-                raise ValueError('setting {}: directory {} is not writable'.format(name, dir_path))
+from mixbytes.conf import ConfigurationBase
 
 
 class Conf(ConfigurationBase):
 
     def __init__(self):
         super().__init__(os.path.join(os.path.dirname(__file__), '..', 'conf', 'minter.conf'))
+        self._uses_web3 = True
 
         self._check_dirs('data_directory')
         self._check_addresses(('reenterable_minter_address', 'account_address'))
@@ -99,11 +38,25 @@ class Conf(ConfigurationBase):
 
         # TODO validate redis
 
+        if self._uses_web3 and self._conf['web3_provider']['class'] not in ('HTTPProvider', 'IPCProvider'):
+            raise TypeError('bad web3 provider')
+
+    def get_provider(self):
+        if not self._uses_web3:
+            raise RuntimeError('web3 is not being used')
+        return globals()[self._conf['web3_provider']['class']](*(self._conf['web3_provider']['args']))
+
     def get_redis(self):
         return redis.StrictRedis(
                 host=self.get('redis', {}).get('host', '127.0.0.1'),
                 port=self.get('redis', {}).get('port', 6379),
                 db=self.get('redis', {}).get('db', 0))
+
+    def _check_addresses(self, addresses):
+        self._check_strings(addresses)
+        for address_name in addresses if isinstance(addresses, (list, tuple)) else (addresses, ):
+            if not Web3.isAddress(self._conf[address_name]):
+                raise ValueError(address_name + ' is incorrect')
 
 
 class State(object):
