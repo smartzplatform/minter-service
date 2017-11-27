@@ -242,7 +242,7 @@ def _get_mint_id():
     if 0 == len(mint_id):
         abort(400, 'empty mint_id')
 
-    return Web3.toBytes(Web3.sha3(mint_id))
+    return Web3.toBytes(hexstr=Web3.sha3(mint_id))
 
 
 def _get_address():
@@ -295,7 +295,7 @@ def _redis_mint_tx_key(mint_id):
     """
     contract_address_bytes = Web3.toBytes(hexstr=app_state.get_minter_contract_address())
     assert 20 == len(contract_address_bytes)
-    return Web3.toBytes(Web3.sha3(contract_address_bytes + mint_id))
+    return Web3.toBytes(hexstr=Web3.sha3(contract_address_bytes + mint_id))
 
 
 def _silent_redis_call(call_fn, *args, **kwargs):
