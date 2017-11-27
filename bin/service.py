@@ -315,6 +315,14 @@ def _load_state(lock_shared=False):
     return State(os.path.join(conf['data_directory'], 'state.yaml'), lock_shared)
 
 
+def _get_receipt_blocking(tx_hash):
+    while True:
+        receipt = w3_instance.eth.getTransactionReceipt(tx_hash)
+        if receipt is not None:
+            return receipt
+        sleep(1)
+
+
 if __name__ == '__main__':
     if len(sys.argv) > 1 and 'init_account' == sys.argv[1]:
         logging.basicConfig(level=logging.INFO)
@@ -350,6 +358,8 @@ if __name__ == '__main__':
             contract = w3_instance.eth.contract(abi=_built_contract('ReenterableMinter')['abi'],
                                                 bytecode=_built_contract('ReenterableMinter')['unlinked_binary'])
 
+            w3_instance.personal.unlockAccount(state.get_account_address(), state['account']['password'])
+
             tx_hash = contract.deploy(transaction={'from': state.get_account_address(),
                                                    'gasPrice': gas_price, 'gas': gas_limit},
                                       args=[token_address])
@@ -358,19 +368,31 @@ if __name__ == '__main__':
             logging.debug('deploy_contract: token_address=%s, gas_price=%d, gas=%d: sent tx %s',
                           token_address, gas_price, gas_limit, tx_hash)
 
-            while True:
-                receipt = w3_instance.eth.getTransactionReceipt(tx_hash)
-                if receipt is not None:
-                    break
-                sleep(1)
-
-            address = receipt['contractAddress']
+            address = _get_receipt_blocking(tx_hash)['contractAddress']
             assert Web3.isAddress(address)
 
             state['minter_contract'] = address
             state.save(True)
 
             print('ReenterableMinter deployed at: ' + address)
+
+    elif len(sys.argv) > 1 and 'recover_ether' == sys.argv[1]:
+        logging.basicConfig(level=logging.INFO)
+        if len(sys.argv) != 3:
+            _fatal('usage: {} recover_ether <address_to_send_ether_to>', sys.argv[0])
+        target_address = sys.argv[2]
+        if not Web3.isAddress(target_address):
+            _fatal('bad address: {}', target_address)
+
+        with _load_state() as state:
+            w3_instance.personal.unlockAccount(state.get_account_address(), state['account']['password'])
+
+            tx_hash = w3_instance.eth.sendTransaction({'from': state.get_account_address(), 'to': target_address,
+                    'value': w3_instance.eth.getBalance(state.get_account_address())})
+
+            print('Waiting for tx: ' + tx_hash)
+            _get_receipt_blocking(tx_hash)
+            print('Mined.')
 
     else:
         logging.basicConfig(level=logging.DEBUG)
