@@ -324,6 +324,17 @@ def _get_receipt_blocking(tx_hash):
 
 
 if __name__ == '__main__':
+    if len(sys.argv) > 1 and sys.argv[1] in ('help', '-h', '--help'):
+        print("""
+Usage:
+
+step 1: init_account - initializes new account to use for minting
+step 2: deploy_contract <token_address> - deploy ReenterableMinter needed for minting
+step 3: * use as a WSGI app (to mint and check minting status)
+step 4: recover_ether <address_to_send_ether_to> - recover ether remaining on minting account
+            """.strip())
+        sys.exit(0)
+
     if len(sys.argv) > 1 and 'init_account' == sys.argv[1]:
         logging.basicConfig(level=logging.INFO)
 
