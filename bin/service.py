@@ -328,10 +328,15 @@ if __name__ == '__main__':
         print("""
 Usage:
 
-step 1: init_account - initializes new account to use for minting
-step 2: deploy_contract <token_address> - deploy ReenterableMinter needed for minting
-step 3: * use as a WSGI app (to mint and check minting status)
-step 4: recover_ether <address_to_send_ether_to> - recover ether remaining on minting account
+step 1: service.py init_account - initializes new account to use for minting
+step 1.1: * send ether to and periodically refill balance of minting account
+
+step 2: service.py deploy_contract <token_address> - deploy ReenterableMinter contract needed for minting
+step 2.1: * make sure deployed ReenterableMinter contract have permissions to mint token
+
+step 3: * use service.py as a WSGI app (to mint and check minting status)
+
+step 4: service.py recover_ether <address_to_send_ether_to> - recover ether remaining on minting account
             """.strip())
         sys.exit(0)
 
