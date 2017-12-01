@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity ^0.4.15;
 
 import '../../contracts/ReenterableMinter.sol';
 import '../../contracts/test_helpers/SimpleMintableToken.sol';
