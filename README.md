@@ -1,6 +1,13 @@
 # minter-service
 Service responsible for sending plenty of ethereum transactions to mint token described by interface `IMintableToken`.
 
+## Install dependencies
+
+```bash
+npm install
+pip3 install -r requirements.txt
+```
+
 ## Test
 
 ### solidity
