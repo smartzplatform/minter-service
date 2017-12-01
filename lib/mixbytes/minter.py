@@ -163,9 +163,11 @@ class MinterService(object):
         gas_price = w3_instance.eth.gasPrice
         gas_limit = int(w3_instance.eth.getBlock('latest').gasLimit * 0.9)
 
+        get_bytecode = lambda json_: json_.get('bytecode') or json_['unlinked_binary']
+
         with self._load_state() as state:
             contract = w3_instance.eth.contract(abi=self._built_contract('ReenterableMinter')['abi'],
-                                                bytecode=self._built_contract('ReenterableMinter')['unlinked_binary'])
+                                                bytecode=get_bytecode(self._built_contract('ReenterableMinter')))
 
             w3_instance.personal.unlockAccount(state.get_account_address(), state['account']['password'])
 

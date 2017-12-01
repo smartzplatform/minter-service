@@ -74,8 +74,10 @@ class TestMinterService(unittest.TestCase):
         minter = self.__class__.createMinter()
         w3 = minter.create_web3()
 
+        get_bytecode = lambda json_: json_.get('bytecode') or json_['unlinked_binary']
+
         contract_json = self._token_json()
-        token_contract = w3.eth.contract(abi=contract_json['abi'], bytecode=contract_json['unlinked_binary'])
+        token_contract = w3.eth.contract(abi=contract_json['abi'], bytecode=get_bytecode(contract_json))
         tx_hash = token_contract.deploy(transaction={'from': w3.eth.accounts[0]})
 
         self.__class__._token_address = w3.eth.getTransactionReceipt(tx_hash)['contractAddress']
