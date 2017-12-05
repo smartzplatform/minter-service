@@ -11,7 +11,7 @@ WORKDIR /app
 
 RUN pip3 install -r requirements.txt --no-cache-dir
 
-RUN npm install -g truffle ganache-cli && npm install --prefix /app zeppelin-solidity
+RUN npm install --prefix /app --only=dev
 
 VOLUME "/app/data"
 
