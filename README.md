@@ -13,6 +13,9 @@ pip3 install -r requirements.txt
 ### solidity
 
 ```bash
+# run ganache-cli if it's not already running
+./node_modules/.bin/ganache-cli --gasPrice 2000 -l 10000000 &>/tmp/ganache.log &
+
 ./node_modules/.bin/truffle test
 ```
 
