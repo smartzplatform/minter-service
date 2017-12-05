@@ -33,4 +33,26 @@ pip3 install -r requirements.txt
 
 ## Usage
 
-See `./bin/service.py -h`
+### Control commands
+
+See `./bin/ctl.py --help`.
+
+### WSGI app
+
+E.g. mount to uwsgi:
+
+```bash
+uwsgi --mount /yourapplication=/path/to/bin/wsgi_app:app
+```
+
+Mint after deploying token and minter contract:
+
+```bash
+curl -s 'http://127.0.0.1/mintTokens?mint_id=foo&address=0x1111111111111111111111111111111111111122&tokens_amount=1000000'
+```
+
+and check:
+
+```bash
+curl -s 'http://127.0.0.1/getMintingStatus?mint_id=foo'
+```
