@@ -1,0 +1,28 @@
+version: '2'
+services:
+        ethereum_node:
+                image: ethereum/client-go:stable
+                restart: always
+                command: geth --fast --cache=512 -rpc --rpcaddr 0.0.0.0 console
+                volumes:
+                        - ~/ethereum:/root
+                ports:
+                        - "8545:8545"
+                        - "30303:30303"
+
+        redis:
+                image: redis:latest
+                ports:
+                        - "6379:6379"
+
+        minter-service:
+                build:
+                        context: .
+                        dockerfile: Dockerfile-prod
+                volumes:
+                        - "/tmp/data:/app/data"
+                        - "conf/minter.conf:/app/conf/minter.conf"
+                ports:
+                        - "8000:8000"
+
+
