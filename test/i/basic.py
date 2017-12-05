@@ -7,6 +7,7 @@ from shutil import rmtree
 from os.path import join
 import logging
 import json
+from time import sleep
 
 import yaml
 
@@ -67,7 +68,8 @@ class TestMinterService(unittest.TestCase):
 
         # sending ether to the account
         w3 = minter.create_web3()
-        w3.eth.sendTransaction({'from': w3.eth.accounts[0], 'to': address, 'value': w3.toWei(1, 'ether')})
+        tx_hash = w3.eth.sendTransaction({'from': w3.eth.accounts[0], 'to': address, 'value': w3.toWei(1, 'ether')})
+        _get_receipt_blocking(tx_hash, w3)
 
 
     def test_2_deploy_contract(self):
@@ -80,11 +82,13 @@ class TestMinterService(unittest.TestCase):
         token_contract = w3.eth.contract(abi=contract_json['abi'], bytecode=get_bytecode(contract_json))
         tx_hash = token_contract.deploy(transaction={'from': w3.eth.accounts[0]})
 
-        self.__class__._token_address = w3.eth.getTransactionReceipt(tx_hash)['contractAddress']
+        self.__class__._token_address = _get_receipt_blocking(tx_hash, w3).contractAddress
 
         address = minter.deploy_contract(self._token_address)
 
-        token_contract.transact({'from': w3.eth.accounts[0], 'to': self._token_address}).transferOwnership(address)
+        tx_hash = token_contract.transact({'from': w3.eth.accounts[0], 'to': self._token_address})\
+            .transferOwnership(address)
+        _get_receipt_blocking(tx_hash, w3)
 
 
     def test_3_minting(self):
@@ -139,7 +143,8 @@ class TestMinterService(unittest.TestCase):
         w3 = minter.create_web3()
 
         tx_hash = minter.recover_ether(w3.eth.accounts[0])
-        self.assertEqual(w3.eth.getTransactionReceipt(tx_hash).status, 1)
+        receipt = w3.eth.getTransactionReceipt(tx_hash)
+        self.assertEqual(receipt.status, 1)
 
         self.assertTrue(w3.eth.getBalance(self.__class__.minter_account) < w3.toWei(0.2, 'ether'))
 
@@ -147,3 +152,11 @@ class TestMinterService(unittest.TestCase):
     def _token_json(self):
         with open(join(self.__class__._root_dir, 'build', 'contracts', 'SimpleMintableToken.json')) as fh:
             return json.load(fh)
+
+
+def _get_receipt_blocking(tx_hash, w3):
+    while True:
+        receipt = w3.eth.getTransactionReceipt(tx_hash)
+        if receipt is not None:
+            return receipt
+        sleep(0.1)

@@ -13,7 +13,7 @@ pip3 install -r requirements.txt
 ### solidity
 
 ```bash
-truffle test
+./node_modules/.bin/truffle test
 ```
 
 ### integration

@@ -16,7 +16,7 @@ root = os.path.realpath(join(os.path.dirname(__file__), '..'))
 
 
 os.chdir(root)
-subprocess.check_call(['truffle', 'compile'])
+subprocess.check_call([join(root, 'node_modules', '.bin', 'truffle'), 'compile'])
 
 
 if os.path.exists(target):
