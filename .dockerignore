@@ -1,0 +1,6 @@
+conf/minter.conf
+.git
+.gitignore
+Dockerfile*
+.dockerignore
+README.md
