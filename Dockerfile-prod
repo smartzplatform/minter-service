@@ -17,9 +17,10 @@ VOLUME [ "/app/data", "/app/conf/minter.conf" ]
 CMD [ "/usr/sbin/uwsgi", \
 	"--http-socket", ":8000", \
 	"--plugin", "python3", \
-	"--wsgi-file", "/app/bin/wsgi_app.py", \
+	"--mount", "/minter-service=/app/bin/wsgi_app.py:app", \
 	"--uid", "uwsgi", "--gid", "uwsgi", \
 	"--master", \
+	"--die-on-term", \
 	"--processes", "10", \
 	"--stats", "localhost:8001" ]
 
