@@ -59,9 +59,9 @@ curl -s 'http://127.0.0.1/getMintingStatus?mint_id=foo'
 
 ## Docker
 
-### Test container
+### Dev container
 
-docker build -f Dockerfile-test .
+docker build -f Dockerfile-dev .
 docker run containtername
 
 ### Prod containter
