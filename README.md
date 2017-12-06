@@ -31,6 +31,12 @@ pip3 install -r requirements.txt
 ./bin/deploy target_dir
 ```
 
+## Configure
+
+See `<installation dir>/conf/minter.conf`.
+
+`geth` must be started with option `--rpcapi eth,personal`.
+
 ## Usage
 
 ### Control commands
