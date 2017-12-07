@@ -12,7 +12,8 @@ RUN python3 -m venv /venv \
 	&& /venv/bin/pip3 install -r requirements.txt --no-cache-dir
 RUN npm install --prefix /app --only=dev
 
-RUN /app/bin/test_wrapper.sh
+RUN /app/bin/test_wrapper.sh 
+RUN rm -f /app/bin/test_wrapper.sh
 RUN /app/bin/deploy /deploy
 
 
