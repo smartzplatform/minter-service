@@ -93,49 +93,50 @@ class TestMinterService(unittest.TestCase):
 
     def test_3_minting(self):
         minter = self.__class__.createMinter(True)
-        w3 = minter.create_web3()
+        try:
+            w3 = minter.create_web3()
 
-        token_contract = w3.eth.contract(address=self.__class__._token_address, abi=self._token_json()['abi'])
+            token_contract = w3.eth.contract(address=self.__class__._token_address, abi=self._token_json()['abi'])
 
-        investor1 = '0x{:040X}'.format(11)
-        investor2 = '0x{:040X}'.format(12)
-        investor3 = '0x{:040X}'.format(13)
+            investor1 = '0x{:040X}'.format(11)
+            investor2 = '0x{:040X}'.format(12)
+            investor3 = '0x{:040X}'.format(13)
 
-        self.assertEqual(token_contract.call().balanceOf(investor1), 0)
-        self.assertEqual(token_contract.call().balanceOf(investor2), 0)
+            self.assertEqual(token_contract.call().balanceOf(investor1), 0)
+            self.assertEqual(token_contract.call().balanceOf(investor2), 0)
 
-        minter.mint_tokens('m1', investor1, 10000)
-        self.assertEqual(minter.get_minting_status('m1'), 'minted')
-        self.assertEqual(minter.get_minting_status('zz'), 'not_minted')
-        self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
-        self.assertEqual(token_contract.call().balanceOf(investor2), 0)
+            minter.mint_tokens('m1', investor1, 10000)
+            self.assertEqual(minter.get_minting_status('m1'), 'minted')
+            self.assertEqual(minter.get_minting_status('zz'), 'not_minted')
+            self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
+            self.assertEqual(token_contract.call().balanceOf(investor2), 0)
 
-        minter.mint_tokens('m2', investor2, 12000)
-        self.assertEqual(minter.get_minting_status('m1'), 'minted')
-        self.assertEqual(minter.get_minting_status('m2'), 'minted')
-        self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
-        self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
+            minter.mint_tokens('m2', investor2, 12000)
+            self.assertEqual(minter.get_minting_status('m1'), 'minted')
+            self.assertEqual(minter.get_minting_status('m2'), 'minted')
+            self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
+            self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
 
-        minter.mint_tokens('m1', investor1, 10000)
-        self.assertEqual(minter.get_minting_status('m1'), 'minted')
-        self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
-        self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
+            minter.mint_tokens('m1', investor1, 10000)
+            self.assertEqual(minter.get_minting_status('m1'), 'minted')
+            self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
+            self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
 
-        minter.mint_tokens('m1', investor2, 12000)
-        self.assertEqual(minter.get_minting_status('m1'), 'minted')
-        self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
-        self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
+            minter.mint_tokens('m1', investor2, 12000)
+            self.assertEqual(minter.get_minting_status('m1'), 'minted')
+            self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
+            self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
 
-        minter.mint_tokens('m3', investor1, 8000)
-        self.assertEqual(minter.get_minting_status('m1'), 'minted')
-        self.assertEqual(minter.get_minting_status('m2'), 'minted')
-        self.assertEqual(minter.get_minting_status('m3'), 'minted')
-        self.assertEqual(minter.get_minting_status('yy'), 'not_minted')
-        self.assertEqual(token_contract.call().balanceOf(investor1), 18000)
-        self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
-        self.assertEqual(token_contract.call().balanceOf(investor3), 0)
-
-        minter.close()
+            minter.mint_tokens('m3', investor1, 8000)
+            self.assertEqual(minter.get_minting_status('m1'), 'minted')
+            self.assertEqual(minter.get_minting_status('m2'), 'minted')
+            self.assertEqual(minter.get_minting_status('m3'), 'minted')
+            self.assertEqual(minter.get_minting_status('yy'), 'not_minted')
+            self.assertEqual(token_contract.call().balanceOf(investor1), 18000)
+            self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
+            self.assertEqual(token_contract.call().balanceOf(investor3), 0)
+        finally:
+            minter.close()
 
 
     def test_4_recover_ether(self):
@@ -144,7 +145,7 @@ class TestMinterService(unittest.TestCase):
 
         tx_hash = minter.recover_ether(w3.eth.accounts[0])
         receipt = w3.eth.getTransactionReceipt(tx_hash)
-        self.assertEqual(receipt.status, 1)
+        self.assertEqual(int(receipt.status, 16), 1)
 
         self.assertTrue(w3.eth.getBalance(self.__class__.minter_account) < w3.toWei(0.2, 'ether'))
 

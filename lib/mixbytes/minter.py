@@ -80,7 +80,7 @@ class MinterService(object):
                 return "minting"
 
             saved_default = w3_instance.eth.defaultBlock
-            w3_instance.eth.defaultBlock = confirmed_block
+            w3_instance.eth.defaultBlock = '0x{:x}'.format(confirmed_block)
         else:
             saved_default = None
 
