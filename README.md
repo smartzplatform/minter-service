@@ -63,7 +63,7 @@ and check:
 curl -s 'http://127.0.0.1/getMintingStatus?mint_id=foo'
 ```
 
-## Docker-compose
+## Docker
 
 ### Variables
 
