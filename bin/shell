@@ -1,0 +1,11 @@
+#!/bin/bash
+
+echo 'Use ./ctl.py to control minter-service
+run ./start-service.sh after'
+
+
+source /venv/bin/activate
+
+cd ./bin
+/bin/bash
+
