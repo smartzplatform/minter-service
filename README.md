@@ -77,7 +77,7 @@ docker-compose run minter-service shell
 
 docker-compose up
 
-### Variables (will be removed)
+### Variables in docker-compose.yml (will be removed)
 
 $MINTER_CONF - path to service config file
 
