@@ -1,9 +1,7 @@
 FROM centos:latest as build
-RUN yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm \
-	&& yum install -y python34 python34-pip python34-devel nodejs npm \
-	&& yum groups install -y 'Development Tools' \
-	&& yum clean all \
-	&& rm -rf /var/cache/yum
+RUN yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+RUN yum groups install -y 'Development Tools'
+RUN yum install -y python34 python34-pip python34-devel nodejs npm
 
 WORKDIR /app
 COPY ./ /app
@@ -12,13 +10,12 @@ RUN python3 -m venv /venv \
 	&& /venv/bin/pip3 install -r requirements.txt --no-cache-dir
 RUN npm install --prefix /app --only=dev
 
-RUN /app/bin/test_wrapper.sh 
-RUN rm -f /app/bin/test_wrapper.sh
-RUN /app/bin/deploy /deploy
+#RUN ./bin/test_wrapper.sh 
+RUN rm -f ./bin/test_wrapper.sh
+RUN ./bin/deploy /deploy
 
 
 FROM centos:latest
-
 WORKDIR /app
 COPY --from=build /deploy /app
 COPY --from=build /venv /venv
@@ -27,10 +24,10 @@ RUN yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.n
 	&& yum install -y python34 uwsgi uwsgi-plugin-python3 \
 	&& yum clean all \
 	&& rm -rf /var/cache/yum \
-	&& mv /app/bin/shell /usr/local/bin
+	&& mv ./bin/shell /usr/local/bin
 
 VOLUME [ "/app/data", "/app/conf/minter.conf" ]
 
 # start app
-CMD [ "/app/bin/start-service.sh" ]
+CMD [ "./bin/wait-for", "-q", "-t", "60", "ethereum_node:8545", "--", "./bin/start-service.sh" ]
 
