@@ -5,6 +5,7 @@ run ./start-service.sh after'
 
 
 source /venv/bin/activate
+export PS1="[\w]\$ "
 
 cd ./bin
 /bin/bash
