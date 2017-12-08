@@ -3,18 +3,14 @@ services:
 
   redis:
     image: redis:latest
-    ports:
-      - "6379:6379"
+    restart: always
 
   ethereum_node:
     image: ethereum/client-go:stable
     restart: always
-    command: geth --rpcapi eth,personal
-    ports:
-      - "8545:8545"
-      - "30303:30303"
+    entrypoint: geth --rpc --rpcaddr 0.0.0.0 --rpcapi eth,personal
     volumes:
-      - "$ETHEREUM_DATA:/root/.ethereum"
+      - "~/.ethereum:/root/.ethereum"
 
   minter-service:
     build:
@@ -27,5 +23,4 @@ services:
     volumes:
       - "$MINTER_DATA:/app/data"
       - "$MINTER_CONF:/app/conf/minter.conf"
-
 
