@@ -1,4 +1,4 @@
-web3
-Flask   # python3-flask
-PyYAML  # python3-yaml
-redis   # python3-redis
+web3==3.16.2
+Flask>=0.12.1
+PyYAML>=3.12
+redis>=2.10.5
