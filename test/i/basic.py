@@ -13,7 +13,7 @@ import yaml
 
 sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
 
-from mixbytes.minter import MinterService, UsageError
+from mixbytes.minter import MinterService, UsageError, get_receipt_status
 
 
 class TestMinterService(unittest.TestCase):
@@ -105,29 +105,29 @@ class TestMinterService(unittest.TestCase):
             self.assertEqual(token_contract.call().balanceOf(investor1), 0)
             self.assertEqual(token_contract.call().balanceOf(investor2), 0)
 
-            minter.mint_tokens('m1', investor1, 10000)
+            _get_receipt_blocking(minter.mint_tokens('m1', investor1, 10000), w3)
             self.assertEqual(minter.get_minting_status('m1'), 'minted')
             self.assertEqual(minter.get_minting_status('zz'), 'not_minted')
             self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
             self.assertEqual(token_contract.call().balanceOf(investor2), 0)
 
-            minter.mint_tokens('m2', investor2, 12000)
+            _get_receipt_blocking(minter.mint_tokens('m2', investor2, 12000), w3)
             self.assertEqual(minter.get_minting_status('m1'), 'minted')
             self.assertEqual(minter.get_minting_status('m2'), 'minted')
             self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
             self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
 
-            minter.mint_tokens('m1', investor1, 10000)
+            _get_receipt_blocking(minter.mint_tokens('m1', investor1, 10000), w3)
             self.assertEqual(minter.get_minting_status('m1'), 'minted')
             self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
             self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
 
-            minter.mint_tokens('m1', investor2, 12000)
+            _get_receipt_blocking(minter.mint_tokens('m1', investor2, 12000), w3)
             self.assertEqual(minter.get_minting_status('m1'), 'minted')
             self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
             self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
 
-            minter.mint_tokens('m3', investor1, 8000)
+            _get_receipt_blocking(minter.mint_tokens('m3', investor1, 8000), w3)
             self.assertEqual(minter.get_minting_status('m1'), 'minted')
             self.assertEqual(minter.get_minting_status('m2'), 'minted')
             self.assertEqual(minter.get_minting_status('m3'), 'minted')
@@ -145,7 +145,7 @@ class TestMinterService(unittest.TestCase):
 
         tx_hash = minter.recover_ether(w3.eth.accounts[0])
         receipt = w3.eth.getTransactionReceipt(tx_hash)
-        self.assertEqual(int(receipt.status, 16), 1)
+        self.assertEqual(get_receipt_status(receipt), 1)
 
         self.assertTrue(w3.eth.getBalance(self.__class__.minter_account) < w3.toWei(0.2, 'ether'))
 

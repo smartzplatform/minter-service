@@ -40,6 +40,7 @@ class MinterService(object):
         :param mint_id: str | bytes, unique mint id for the request
         :param address: valid web3 address
         :param tokens: int, tokens to mint (in wei)
+        :return: hash of the transaction
         """
         assert self.wsgi_mode
 
@@ -57,6 +58,8 @@ class MinterService(object):
 
         logging.debug('mint_tokens(): mint_id=%s, address=%s, tokens=%d, gas_price=%d, gas=%d: sent tx %s',
                       Web3.toHex(mint_id), address, tokens, gas_price, gas_limit, tx_hash)
+
+        return tx_hash
 
 
     def get_minting_status(self, mint_id):
@@ -114,7 +117,7 @@ class MinterService(object):
             if receipt is None:
                 continue  # blockchain reorg?
 
-            if 0 == int(receipt.status, 16):
+            if 0 == get_receipt_status(receipt):
                 # If any of the transactions has failed, it's a very bad sign
                 # (failure due to reentrance should't be possible, see ReenterableMinter).
                 return "failed"
@@ -400,6 +403,10 @@ class _State(object):
             self.save()
             self._lock.unlock()
             self._lock = None
+
+
+def get_receipt_status(receipt):
+    return receipt.status if isinstance(receipt.status, int) else int(receipt.status, 16)
 
 
 def _silent_redis_call(call_fn, *args, **kwargs):
