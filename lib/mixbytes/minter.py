@@ -75,31 +75,11 @@ class MinterService(object):
         w3_instance = self._w3
         conf = self._conf
 
-        # Checking if it was mined enough block ago.
-        if 'require_confirmations' in conf:
-            confirmed_block = w3_instance.eth.blockNumber - int(conf['require_confirmations'])
-            if confirmed_block < 0:
-                # we are at the beginning of blockchain for some reason
-                return "minting"
-
-            saved_default = w3_instance.eth.defaultBlock
-            w3_instance.eth.defaultBlock = '0x{:x}'.format(confirmed_block)
-        else:
-            saved_default = None
-
-        try:
-            if self._target_contract().call().m_processed_mint_id(mint_id):
-                # TODO background eviction thread/process
-                _silent_redis_call(self._redis.delete, self._redis_mint_tx_key(mint_id))
-
-                return "minted"
-        finally:
-            if 'require_confirmations' in conf:
-                assert saved_default is not None
-                w3_instance.eth.defaultBlock = saved_default
+        if self._get_minting_status_is_confirmed(mint_id):
+            return "minted"
 
         # Checking if it was mined recently (still subject to removal from blockchain!).
-        if self._target_contract().call().m_processed_mint_id(mint_id):
+        if conf.get('require_confirmations', 0) > 0 and self._target_contract().call().m_processed_mint_id(mint_id):
             return "minting"
 
         # finding all known transaction ids which could mint this mint_id
@@ -181,10 +161,12 @@ class MinterService(object):
             logging.debug('deploy_contract: token_address=%s, gas_price=%d, gas=%d: sent tx %s',
                           token_address, gas_price, gas_limit, tx_hash)
 
-            address = self._get_receipt_blocking(tx_hash)['contractAddress']
+            receipt = self._get_receipt_blocking(tx_hash)
+            address = receipt['contractAddress']
             assert Web3.isAddress(address)
 
             state['minter_contract'] = address
+            state['minter_contract_block_num'] = receipt.blockNumber
             state.save(True)
 
             return address
@@ -227,6 +209,38 @@ class MinterService(object):
         if self.wsgi_mode:
             self._wsgi_mode_state.close()
 
+
+    def _get_minting_status_is_confirmed(self, prepared_mint_id):
+        w3_instance = self._w3
+        conf = self._conf
+
+        # Checking if it was mined enough block ago.
+        if 'require_confirmations' in conf:
+            confirmed_block = w3_instance.eth.blockNumber - int(conf['require_confirmations'])
+            if confirmed_block < 0:
+                # we are at the beginning of blockchain for some reason
+                return False
+            if self._wsgi_mode_state['minter_contract_block_num'] >= confirmed_block:
+                # its too early, calls to m_processed_mint_id will return 0x
+                return False
+
+            saved_default = w3_instance.eth.defaultBlock
+            w3_instance.eth.defaultBlock = '0x{:x}'.format(confirmed_block)
+        else:
+            saved_default = None
+
+        try:
+            if self._target_contract().call().m_processed_mint_id(prepared_mint_id):
+                # TODO background eviction thread/process
+                _silent_redis_call(self._redis.delete, self._redis_mint_tx_key(prepared_mint_id))
+
+                return True
+        finally:
+            if 'require_confirmations' in conf:
+                assert saved_default is not None
+                w3_instance.eth.defaultBlock = saved_default
+
+        return False
 
     def _load_state(self):
         return _State(os.path.join(self._conf['data_directory'], 'state.yaml'), lock_shared=self.wsgi_mode)
