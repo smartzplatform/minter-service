@@ -214,6 +214,9 @@ class MinterService(object):
         w3_instance = self._w3
         conf = self._conf
 
+        # as a side effect checking that contract was deployed and we know minter_contract_block_num
+        contract = self._target_contract()
+
         # Checking if it was mined enough block ago.
         if 'require_confirmations' in conf:
             confirmed_block = w3_instance.eth.blockNumber - int(conf['require_confirmations'])
@@ -230,7 +233,7 @@ class MinterService(object):
             saved_default = None
 
         try:
-            if self._target_contract().call().m_processed_mint_id(prepared_mint_id):
+            if contract.call().m_processed_mint_id(prepared_mint_id):
                 # TODO background eviction thread/process
                 _silent_redis_call(self._redis.delete, self._redis_mint_tx_key(prepared_mint_id))
 
