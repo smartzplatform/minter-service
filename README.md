@@ -63,31 +63,22 @@ and check:
 curl -s 'http://127.0.0.1/getMintingStatus?mint_id=foo'
 ```
 
-## Docker
+## Docker-compose
 
-### Dev container
+### Build
 
-docker build -f Dockerfile-dev .
+docker-compose build
 
-docker run containtername
+### Control service
 
-### Prod containter
+docker-compose run minter-service shell
 
-docker build -f Dockerfile-prod .
+### Start service
 
-docker run -p 8000:8000 -v $MINTER_CONF:/app/conf/minter.conf -v "$MINTER_DATA:/app/data" containtername
+docker-compose up
 
-### docker-compose
+### Variables in docker-compose.yml (will be removed)
 
 $MINTER_CONF - path to service config file
 
 $MINTER_DATA - path to service data directory
-
-$ETHEREUM_DATA - path to geth data directory (~/.ethereum)
-
-
-start minter-service, geth, redis:
-
-docker-compose up
-
-
