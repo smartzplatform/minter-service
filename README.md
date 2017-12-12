@@ -69,16 +69,19 @@ curl -s 'http://127.0.0.1/getMintingStatus?mint_id=foo'
 
 docker-compose build
 
-### Control service
+### Start service in control mode
 
 docker-compose run minter-service shell
 
-### Start service
+For help use ./ctl.py -h
+
+enter ctrl-D after finished
+
+### Start service http-mode
 
 docker-compose up
 
-### Variables in docker-compose.yml (will be removed)
+### Stop service
 
-$MINTER_CONF - path to service config file
+docker-compose stop
 
-$MINTER_DATA - path to service data directory
