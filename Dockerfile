@@ -29,5 +29,5 @@ RUN yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.n
 VOLUME [ "/app/data", "/app/conf/minter.conf" ]
 
 # start app
-CMD [ "./bin/wait-for", "-q", "-t", "60", "ethereum_node:8545", "--", "./bin/start-service.sh" ]
+CMD [ "./bin/start-service.sh" ]
 
