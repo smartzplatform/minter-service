@@ -10,7 +10,7 @@ services:
     restart: always
     entrypoint: geth --rpc --rpcaddr 0.0.0.0 --rpcapi eth,personal
     volumes:
-      - "~/.ethereum:/root/.ethereum"   # blockchain client data directory
+      - "~/.ethereum:/root/.ethereum"         # blockchain client data directory
 
   minter-service:
     build:
@@ -18,15 +18,9 @@ services:
     depends_on:
       - redis
       - ethereum_node
-    environment:
-      REDIS_HOST: redis                 # redis host
-      REDIS_PORT: 6379                  # redis port
-      REDIS_DB: 0                       # redis db
-      ETHEREUM_NODE: ethereum_node      # geth host
-      ETHEREUM_RPC: 8545                # geth rpc port
-      CONFIRMATIONS: 7                  # number of confirmations
     ports:
-      - "8000:8000"                     # minter-service port (change first digit)
+      - "8000:8000"                           # minter-service port (change first digit)
     volumes:
-      - /data:/app/data"                # minter-service data directory
+      - "/data:/app/data"                     # minter-service data directory
+      - "/minter.conf:/app/conf/minter.conf"  # config file
 
