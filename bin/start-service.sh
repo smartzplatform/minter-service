@@ -1,7 +1,7 @@
 #!/bin/bash
 
 chmod -R 777 /app/data
-./bin/wait-for -q -t 60 $ETHEREUM_NODE:$ETHEREUM_RPC -- sleep 5
+./bin/wait-for -q -t 60 ethereum_node:8545 -- sleep 5
 /usr/sbin/uwsgi \
 	--http-socket :8000 \
         --master \
