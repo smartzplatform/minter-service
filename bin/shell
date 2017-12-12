@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo 'Use ./ctl.py to control minter-service
-run ./start-service.sh after'
+run exit after finished'
 
 
 source /venv/bin/activate
