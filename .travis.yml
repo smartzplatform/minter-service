@@ -6,10 +6,18 @@ node_js:
 #  - "7"
   - "8"
 
+addons:
+  apt:
+    sources:
+    - deadsnakes
+    packages:
+    - python3.5
+    - python3.5-dev
+    - python3.5-venv
+
 install:
-  - sudo apt-get update
-  - sudo apt-get install -y python3-pip
-  - pip3 install -r requirements.txt
+  - python3.5 -m venv .venv
+  - ./.venv/bin/pip3 install -r requirements.txt
   - npm install --only=dev
 
 before_script:
@@ -20,6 +28,7 @@ script:
   - npm test
   - ./node_modules/.bin/truffle compile
   - ./node_modules/.bin/truffle test
+  - source .venv/bin/activate
   - ./test/i/run.sh
 
 notifications:
