@@ -7,9 +7,8 @@ node_js:
   - "8"
 
 install:
-  - python3 -V
-  - apt-get update
-  - apt-get install -y python3-pip
+  - sudo apt-get update
+  - sudo apt-get install -y python3-pip
   - pip3 install venv
   - npm install --only=dev
   - python3 -m venv .venv \
