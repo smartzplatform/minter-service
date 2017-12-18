@@ -7,6 +7,7 @@ node_js:
   - "8"
 
 install:
+  - sudo apt-get install python3-venv
   - npm install --only=dev
   - python3 -m venv .venv \
     && /venv/bin/pip3 install -r requirements.txt --no-cache-dir
