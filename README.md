@@ -1,4 +1,7 @@
 # minter-service
+
+![](https://travis-ci.org/mixbytes/minter-service.svg?branch=master)
+
 Service responsible for sending plenty of ethereum transactions to mint token described by interface `IMintableToken`.
 
 
