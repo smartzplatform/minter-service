@@ -9,17 +9,18 @@ node_js:
 install:
   - sudo apt-get update
   - sudo apt-get install -y python3-pip
-  - pip3 install -r requirements.txt --no-cache-dir
+  - pip3 install -r requirements.txt
   - npm install --only=dev
 
 before_script:
-  - ./node_modules/.bin/testrpc -u 0 -u 1 -u 2 -u 3 -u 4 -u 5 --gasLimit 100000000 --gasPrice 2000 > /dev/null &
+  - ./node_modules/.bin/ganache-cli -u 0 -u 1 -u 2 -u 3 -u 4 -u 5 --gasLimit 100000000 --gasPrice 2000 > /dev/null &
   - sleep 5
 
 script:
   - npm test
   - ./node_modules/.bin/truffle compile
   - ./node_modules/.bin/truffle test
+  - ./test/i/run.sh
 
 notifications:
   email:
