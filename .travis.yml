@@ -1,3 +1,5 @@
+---
+
 language: node_js
 dist: trusty
 sudo: false
@@ -9,11 +11,11 @@ node_js:
 addons:
   apt:
     sources:
-    - deadsnakes
+      - deadsnakes
     packages:
-    - python3.5
-    - python3.5-dev
-    - python3.5-venv
+      - python3.5
+      - python3.5-dev
+      - python3.5-venv
 
 install:
   - python3.5 -m venv .venv
@@ -35,4 +37,3 @@ notifications:
   email:
     on_success: change
     on_failure: always
-
