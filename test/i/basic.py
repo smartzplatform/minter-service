@@ -98,9 +98,9 @@ class TestMinterService(unittest.TestCase):
 
             token_contract = w3.eth.contract(address=self.__class__._token_address, abi=self._token_json()['abi'])
 
-            investor1 = '0x{:040X}'.format(11)
-            investor2 = '0x{:040X}'.format(12)
-            investor3 = '0x{:040X}'.format(13)
+            investor1 = w3.toBytes(hexstr='0x{:040X}'.format(11))
+            investor2 = w3.toBytes(hexstr='0x{:040X}'.format(12))
+            investor3 = w3.toBytes(hexstr='0x{:040X}'.format(13))
 
             self.assertEqual(token_contract.call().balanceOf(investor1), 0)
             self.assertEqual(token_contract.call().balanceOf(investor2), 0)
