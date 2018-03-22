@@ -4,11 +4,13 @@ import sys
 import os
 
 from web3 import Web3
-from flask import Flask, abort, request
+from flask import Flask, abort, request, jsonify
+
 
 sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
 
 from mixbytes.minter import MinterService
+
 
 
 conf_filename = os.path.join(os.path.dirname(__file__), '..', 'conf', 'minter.conf')
@@ -21,12 +23,12 @@ wsgi_minter = MinterService(conf_filename, contracts_directory, wsgi_mode=True)
 @app.route('/mintTokens')
 def mint_tokens():
     wsgi_minter.mint_tokens(_get_mint_id(), _get_address(), _get_tokens())
-    return '{"success": true}'
+    return jsonify({'success': True})
 
 
 @app.route('/getMintingStatus')
 def get_minting_status():
-    return '{{"status": "{}"}}'.format(wsgi_minter.get_minting_status(_get_mint_id()))
+    return jsonify({ 'status': wsgi_minter.get_minting_status(_get_mint_id())})
 
 
 def _get_mint_id():
@@ -62,4 +64,5 @@ def _validate_address(address):
 
 
 if __name__ == '__main__':
+   
     app.run()
