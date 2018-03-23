@@ -15,7 +15,6 @@ import redis.exceptions
 from mixbytes.filelock import FileLock, WouldBlockError
 from mixbytes.conf import ConfigurationBase
 
-
 class MinterService(object):
 
     def __init__(self, conf_filename, contracts_directory, wsgi_mode=False):
@@ -33,7 +32,7 @@ class MinterService(object):
             self._w3.personal.unlockAccount(self._wsgi_mode_state.get_account_address(),
                                             self._wsgi_mode_state['account']['password'])
 
-
+   
     def mint_tokens(self, mint_id, address, tokens):
         """
         Mints tokens
@@ -134,6 +133,28 @@ class MinterService(object):
             state.save(True)
 
             return address
+        
+    def get_or_init_account(self):
+        state = self._load_state()
+        
+        if state.account_address is not None:
+            
+            res = state.account_address
+        else:            
+            res =  self.init_account()
+
+        state.close()
+        return res
+
+
+    def is_contract_deployed(self):
+        try:
+            self._wsgi_mode_state.get_minter_contract_address()
+            return True
+        except RuntimeError:
+            return False
+            
+        
 
     def deploy_contract(self, token_address):
         """
@@ -201,6 +222,12 @@ class MinterService(object):
         :return: web3 interface configured with this instance configuration
         """
         return Web3(self._conf.get_provider())
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
+    def __enter__(self):
+        return self
 
     def close(self):
         """
@@ -277,7 +304,12 @@ class MinterService(object):
             if receipt is not None:
                 return receipt
             sleep(1)
-
+    def token_address(self):
+        try:
+            return self._target_contract().call().m_token()
+        except RuntimeError:
+            return None
+    
     @classmethod
     def _prepare_mint_id(cls, mint_id):
         if not isinstance(mint_id, (str, bytes)):
