@@ -8,5 +8,13 @@ source /venv/bin/activate
 export PS1="[\w]\$ "
 
 cd ./bin
-/bin/bash
+
+if [[ $# -lt 1 ]]
+then
+    /bin/bash 
+else
+    exec=$@
+    /bin/bash -c "./ctl.py $exec"
+fi
+
 
