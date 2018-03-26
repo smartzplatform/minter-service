@@ -4,3 +4,4 @@ conf/minter.conf
 Dockerfile*
 .dockerignore
 README.md
+/node_modules/
