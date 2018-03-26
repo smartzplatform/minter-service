@@ -117,6 +117,12 @@ class SimpleTokenInstaller(cli.Application):
 
                 logging.info("Deploy minter contract...")
                 address = minter_service.deploy_contract(token_address)
+
+                tx_hash = token_contract.transact({'from': minter_address, 'to': token_address}).transferOwnership(address)
+
+                logging.info("Transfer ownership to minter...")
+                
+                _get_receipt_blocking(tx_hash, w3)
             print("Token address: %s" % (minter_service.token_address()))
         
         os.remove(conf_file)
