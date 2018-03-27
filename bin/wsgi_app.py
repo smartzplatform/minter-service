@@ -5,11 +5,15 @@ import os
 
 from web3 import Web3
 from flask import Flask, abort, request, jsonify
+import logging
 
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
 
 from mixbytes.minter import MinterService
+from apscheduler.schedulers.background import BackgroundScheduler
+
 
 
 
@@ -18,6 +22,15 @@ contracts_directory = os.path.join(os.path.dirname(__file__), '..', 'built_contr
 
 app = Flask(__name__)
 wsgi_minter = MinterService(conf_filename, contracts_directory, wsgi_mode=True)
+
+
+def unlock_account():
+    wsgi_minter.unlockAccount()
+
+
+scheduler = BackgroundScheduler()
+job = scheduler.add_job(unlock_account, 'interval', minutes=1)
+scheduler.start()
 
 
 @app.route('/mintTokens')
