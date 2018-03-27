@@ -14,6 +14,11 @@ import redis.exceptions
 
 from mixbytes.filelock import FileLock, WouldBlockError
 from mixbytes.conf import ConfigurationBase
+import schedule
+import time
+import threading
+
+
 
 class MinterService(object):
 
@@ -29,9 +34,34 @@ class MinterService(object):
         self.__target_contract = None
 
         if wsgi_mode:
-            self._w3.personal.unlockAccount(self._wsgi_mode_state.get_account_address(),
-                                            self._wsgi_mode_state['account']['password'])
+            self._unlockAccount()
+            schedule.every(self._conf.get("unlock_acc_period", 300)).seconds.do(self._unlockAccount)
 
+            self.stop_schedule = self.__class__._continiuously_schedule()
+
+    def _unlockAccount(self):
+        logging.debug("Unlock account %s" % (self._wsgi_mode_state.get_account_address()))
+        self._w3.personal.unlockAccount(self._wsgi_mode_state.get_account_address(),
+                                        self._wsgi_mode_state['account']['password'],
+                                        600)
+            
+    @classmethod        
+    def _continiuously_schedule(cls):
+        cease_continuous_run = threading.Event()
+
+        class ScheduleThread(threading.Thread):
+            @classmethod
+            def run(cls):
+                while not cease_continuous_run.is_set():
+                    schedule.run_pending()
+                    time.sleep(10)
+
+        scheduler_thread = ScheduleThread()
+        scheduler_thread.setDaemon(True)
+        scheduler_thread.start()
+       
+        
+        return cease_continuous_run
    
     def mint_tokens(self, mint_id, address, tokens):
         """
@@ -234,6 +264,7 @@ class MinterService(object):
         For wsgi mode
         """
         if self.wsgi_mode:
+            self.stop_schedule.set()
             self._wsgi_mode_state.close()
 
 
