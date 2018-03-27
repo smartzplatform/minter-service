@@ -28,7 +28,8 @@ RUN yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.n
 	&& yum clean all \
 	&& rm -rf /var/cache/yum \
 	&& mv ./bin/shell /usr/local/bin
-
+        
+ENV PYTHONPATH=/app/lib/
 VOLUME [ "/app/data", "/app/conf/minter.conf" ]
 
 # start app

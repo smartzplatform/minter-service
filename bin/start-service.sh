@@ -10,5 +10,4 @@ chmod -R 777 /app/data
         --mount /minter-service=/app/bin/wsgi_app.py --callable app \
         --uid uwsgi --gid uwsgi \
         --die-on-term \
-        --enable-threads \
         --processes 4
