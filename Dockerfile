@@ -4,11 +4,14 @@ RUN yum groups install -y 'Development Tools'
 RUN yum install -y python34 python34-pip python34-devel nodejs npm
 
 WORKDIR /app
-COPY ./ /app
+ADD ./requirements.txt package.json  /app/
+
 
 RUN python3 -m venv /venv \
 	&& /venv/bin/pip3 install -r requirements.txt --no-cache-dir
 RUN npm install --prefix /app --only=dev
+
+COPY ./ /app
 
 RUN ./bin/test_wrapper.sh 
 RUN rm -f ./bin/test_wrapper.sh
