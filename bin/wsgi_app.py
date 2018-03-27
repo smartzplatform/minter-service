@@ -29,7 +29,7 @@ def unlock_account():
 
 
 scheduler = BackgroundScheduler()
-job = scheduler.add_job(unlock_account, 'interval', minutes=1)
+job = scheduler.add_job(unlock_account, 'interval', minutes=5)
 scheduler.start()
 
 
