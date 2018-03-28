@@ -16,7 +16,7 @@ from mixbytes.filelock import FileLock, WouldBlockError
 from mixbytes.conf import ConfigurationBase
 
 
-
+logger = logging.getLogger(__name__)
 
 class MinterService(object):
 
@@ -35,7 +35,7 @@ class MinterService(object):
            
 
     def unlockAccount(self):
-        logging.debug("Unlock account %s" % (self._wsgi_mode_state.get_account_address()))
+        logger.debug("Unlock account %s" % (self._wsgi_mode_state.get_account_address()))
         self._w3.personal.unlockAccount(self._wsgi_mode_state.get_account_address(),
                                         self._wsgi_mode_state['account']['password'],
                                         600)
@@ -62,7 +62,7 @@ class MinterService(object):
         # remembering tx hash for get_minting_status references - optional step
         _silent_redis_call(self._redis.lpush, self._redis_mint_tx_key(mint_id), Web3.toBytes(hexstr=tx_hash))
 
-        logging.debug('mint_tokens(): mint_id=%s, address=%s, tokens=%d, gas_price=%d, gas=%d: sent tx %s',
+        logger.debug('mint_tokens(): mint_id=%s, address=%s, tokens=%d, gas_price=%d, gas=%d: sent tx %s',
                       Web3.toHex(mint_id), address, tokens, gas_price, gas_limit, tx_hash)
 
         return tx_hash
@@ -186,7 +186,7 @@ class MinterService(object):
                                                    'gasPrice': gas_price, 'gas': gas_limit},
                                       args=[token_address])
 
-            logging.debug('deploy_contract: token_address=%s, gas_price=%d, gas=%d: sent tx %s',
+            logger.debug('deploy_contract: token_address=%s, gas_price=%d, gas=%d: sent tx %s',
                           token_address, gas_price, gas_limit, tx_hash)
 
             receipt = self._get_receipt_blocking(tx_hash)
@@ -217,7 +217,7 @@ class MinterService(object):
             tx_hash = self._w3.eth.sendTransaction({'from': state.get_account_address(), 'to': target_address,
                     'value': value2send, 'gasPrice': gas_price, 'gas': gas_limit})
 
-            logging.debug('recover_ether: from=%s, target_address=%s, gas_price=%d, gas=%d: sent tx %s',
+            logger.debug('recover_ether: from=%s, target_address=%s, gas_price=%d, gas=%d: sent tx %s',
                           state.get_account_address(), target_address, gas_price, gas_limit, tx_hash)
 
             self._get_receipt_blocking(tx_hash)
@@ -469,7 +469,7 @@ def _silent_redis_call(call_fn, *args, **kwargs):
     try:
         return call_fn(*args, **kwargs)
     except redis.exceptions.ConnectionError as exc:
-        logging.warning('could not contact redis: %s', exc)
+        logger.warning('could not contact redis: %s', exc)
         return None
 
 

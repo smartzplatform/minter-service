@@ -1,15 +1,38 @@
 #!/usr/bin/env python3
 
-import sys
 import os
+import logging
+import logging.config
 
 from web3 import Web3
 from flask import Flask, abort, request, jsonify
-import logging
+
 from uwsgidecorators import timer
 from mixbytes.minter import MinterService
 
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.config.dictConfig({
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'standard': {
+                'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+            }
+        },
+        'handlers': {
+            'default': {
+                'level': os.environ.get("LOG_LEVEL", logging.getLevelName(logging.DEBUG)),
+                'class': 'logging.StreamHandler',
+                'formatter': 'standard',
+                'stream': 'ext://sys.stdout'
+            }
+        },
+        'root': {
+                'handlers': ['default'],
+                'level': os.environ.get("LOG_LEVEL", logging.getLevelName(logging.DEBUG))
+        }
+})
+
+logger = logging.getLogger(__name__)
 
 conf_filename = os.path.join(os.path.dirname(__file__), '..', 'conf', 'minter.conf')
 contracts_directory = os.path.join(os.path.dirname(__file__), '..', 'built_contracts')
@@ -31,7 +54,7 @@ def mint_tokens():
 
 @app.route('/getMintingStatus')
 def get_minting_status():
-    return jsonify({ 'status': wsgi_minter.get_minting_status(_get_mint_id())})
+    return jsonify({'status': wsgi_minter.get_minting_status(_get_mint_id())})
 
 
 def _get_mint_id():
@@ -67,5 +90,4 @@ def _validate_address(address):
 
 
 if __name__ == '__main__':
-   
     app.run()
