@@ -54,7 +54,7 @@ def mint_tokens():
 
 @app.route('/getMintingStatus')
 def get_minting_status():
-    return jsonify({'status': wsgi_minter.get_minting_status(_get_mint_id())})
+    return jsonify(wsgi_minter.get_minting_status(_get_mint_id()))
 
 
 def _get_mint_id():

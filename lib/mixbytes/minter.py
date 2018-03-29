@@ -19,7 +19,7 @@ from mixbytes.conf import ConfigurationBase
 logger = logging.getLogger(__name__)
 
 class MinterService(object):
-
+    TX_BLOCK_HEIGHT_KEY_PREFIX = 'bh'
     def __init__(self, conf_filename, contracts_directory, wsgi_mode=False):
         self._conf = _Conf(conf_filename)
         self.contracts_directory = contracts_directory
@@ -33,7 +33,6 @@ class MinterService(object):
         if wsgi_mode:
             self.unlockAccount()
            
-
     def unlockAccount(self):
         logger.debug("Unlock account %s" % (self._wsgi_mode_state.get_account_address()))
         self._w3.personal.unlockAccount(self._wsgi_mode_state.get_account_address(),
@@ -61,14 +60,19 @@ class MinterService(object):
 
         # remembering tx hash for get_minting_status references - optional step
         _silent_redis_call(self._redis.lpush, self._redis_mint_tx_key(mint_id), Web3.toBytes(hexstr=tx_hash))
-
+        
         logger.debug('mint_tokens(): mint_id=%s, address=%s, tokens=%d, gas_price=%d, gas=%d: sent tx %s',
                       Web3.toHex(mint_id), address, tokens, gas_price, gas_limit, tx_hash)
 
         return tx_hash
 
-
-    def get_minting_status(self, mint_id):
+    def _build_status(self, status, **kwargs):
+            res = {'status': status}
+            for k, v in kwargs.items():
+                res[k] = v
+            return res
+        
+    def get_minting_status(self, mint_id) -> dict:
         """
         Query current status of mint request
         :param mint_id: str | bytes, unique mint id for the request
@@ -80,14 +84,21 @@ class MinterService(object):
 
         w3_instance = self._w3
         conf = self._conf
-
+       
         if self._get_minting_status_is_confirmed(mint_id):
-            return "minted"
+            return self._build_status('minted')
 
         # Checking if it was mined recently (still subject to removal from blockchain!).
         if conf.get('require_confirmations', 0) > 0 and self._target_contract().call().m_processed_mint_id(mint_id):
-            return "minting"
-
+            current_block_number = self._w3.eth.blockNumber
+            mint_id_block = _silent_redis_call(self._redis.get, self._redis_mint_tx_key(mint_id, self.TX_BLOCK_HEIGHT_KEY_PREFIX))
+            if not mint_id_block:
+                _silent_redis_call(self._redis.set, self._redis_mint_tx_key(mint_id, self.TX_BLOCK_HEIGHT_KEY_PREFIX), self._w3.eth.blockNumber, ex=3600)
+            
+            start_mint_block = int(mint_id_block or current_block_number)
+            confirmations = current_block_number - start_mint_block
+            rest_confirmations = conf.get('require_confirmations', 0) - confirmations
+            return self._build_status('minting', confirmations=confirmations, rest_confirmations=rest_confirmations)
         # finding all known transaction ids which could mint this mint_id
         tx_bin_ids = _silent_redis_call(self._redis.lrange, self._redis_mint_tx_key(mint_id), 0, -1) or []
 
@@ -106,19 +117,18 @@ class MinterService(object):
             if 0 == get_receipt_status(receipt):
                 # If any of the transactions has failed, it's a very bad sign
                 # (failure due to reentrance should't be possible, see ReenterableMinter).
-                return "failed"
+                return self._build_status('failed')
 
         if txs:
             # There is still hope.
-            return "minting"
+            return self._build_status('minting', confirmations=0, rest_confirmations=conf.get('require_confirmations', 0))
         else:
             # Last chance - maybe we're out of sync?
             if w3_instance.eth.syncing:
-                return "node_syncing"
+                return self._build_status('node_syncing')
 
             # There are no signs of minting - now its vise for client to re-mint this mint_id.
-            return "not_minted"
-
+            return self._build_status('not_minted')
 
     def init_account(self):
         """
@@ -244,7 +254,7 @@ class MinterService(object):
             self._wsgi_mode_state.close()
 
 
-    def _get_minting_status_is_confirmed(self, prepared_mint_id):
+    def _get_minting_status_is_confirmed(self, prepared_mint_id) -> tuple:
         w3_instance = self._w3
         conf = self._conf
 
@@ -328,7 +338,7 @@ class MinterService(object):
         return Web3.toBytes(hexstr=Web3.sha3(mint_id))
 
 
-    def _redis_mint_tx_key(self, mint_id):
+    def _redis_mint_tx_key(self, mint_id, key_prefix: str = ""):
         """
         Creating unique redis key for current minter contract and mint_id
         :param mint_id: mint id (bytes)
@@ -337,7 +347,11 @@ class MinterService(object):
         assert self.wsgi_mode
         contract_address_bytes = Web3.toBytes(hexstr=self._wsgi_mode_state.get_minter_contract_address())
         assert 20 == len(contract_address_bytes)
-        return Web3.toBytes(hexstr=Web3.sha3(contract_address_bytes + mint_id))
+        
+        if key_prefix is None:
+            key_prefix = ""
+        
+        return key_prefix.encode('utf-8') + Web3.toBytes(hexstr=Web3.sha3(contract_address_bytes + mint_id))
 
 
 class _Conf(ConfigurationBase):

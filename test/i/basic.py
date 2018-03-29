@@ -53,7 +53,7 @@ class TestMinterService(unittest.TestCase):
             yaml.safe_dump(conf, fh, default_flow_style=False)
 
     @classmethod
-    def createMinter(cls, wsgi_mode=False):
+    def createMinter(cls, wsgi_mode=False) -> MinterService:
         return MinterService(cls._conf_file, join(cls._install_dir, 'built_contracts'), wsgi_mode)
 
 
@@ -95,7 +95,7 @@ class TestMinterService(unittest.TestCase):
         minter = self.__class__.createMinter(True)
         try:
             w3 = minter.create_web3()
-
+            
             token_contract = w3.eth.contract(address=self.__class__._token_address, abi=self._token_json()['abi'])
 
             investor1 = w3.toBytes(hexstr='0x{:040X}'.format(11))
@@ -106,32 +106,32 @@ class TestMinterService(unittest.TestCase):
             self.assertEqual(token_contract.call().balanceOf(investor2), 0)
 
             _get_receipt_blocking(minter.mint_tokens('m1', investor1, 10000), w3)
-            self.assertEqual(minter.get_minting_status('m1'), 'minted')
-            self.assertEqual(minter.get_minting_status('zz'), 'not_minted')
+            self.assertEqual(minter.get_minting_status('m1')['status'], 'minted')
+            self.assertEqual(minter.get_minting_status('zz')['status'], 'not_minted')
             self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
             self.assertEqual(token_contract.call().balanceOf(investor2), 0)
 
             _get_receipt_blocking(minter.mint_tokens('m2', investor2, 12000), w3)
-            self.assertEqual(minter.get_minting_status('m1'), 'minted')
-            self.assertEqual(minter.get_minting_status('m2'), 'minted')
+            self.assertEqual(minter.get_minting_status('m1')['status'], 'minted')
+            self.assertEqual(minter.get_minting_status('m2')['status'], 'minted')
             self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
             self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
 
             _get_receipt_blocking(minter.mint_tokens('m1', investor1, 10000), w3)
-            self.assertEqual(minter.get_minting_status('m1'), 'minted')
+            self.assertEqual(minter.get_minting_status('m1')['status'], 'minted')
             self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
             self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
-
+        
             _get_receipt_blocking(minter.mint_tokens('m1', investor2, 12000), w3)
-            self.assertEqual(minter.get_minting_status('m1'), 'minted')
+            self.assertEqual(minter.get_minting_status('m1')['status'], 'minted')
             self.assertEqual(token_contract.call().balanceOf(investor1), 10000)
             self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
 
             _get_receipt_blocking(minter.mint_tokens('m3', investor1, 8000), w3)
-            self.assertEqual(minter.get_minting_status('m1'), 'minted')
-            self.assertEqual(minter.get_minting_status('m2'), 'minted')
-            self.assertEqual(minter.get_minting_status('m3'), 'minted')
-            self.assertEqual(minter.get_minting_status('yy'), 'not_minted')
+            self.assertEqual(minter.get_minting_status('m1')['status'], 'minted')
+            self.assertEqual(minter.get_minting_status('m2')['status'], 'minted')
+            self.assertEqual(minter.get_minting_status('m3')['status'], 'minted')
+            self.assertEqual(minter.get_minting_status('yy')['status'], 'not_minted')
             self.assertEqual(token_contract.call().balanceOf(investor1), 18000)
             self.assertEqual(token_contract.call().balanceOf(investor2), 12000)
             self.assertEqual(token_contract.call().balanceOf(investor3), 0)
