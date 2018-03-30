@@ -57,6 +57,11 @@ def get_minting_status():
     return jsonify(wsgi_minter.get_minting_status(_get_mint_id()))
 
 
+@app.route('/blockChainHeight')
+def get_blockchain_height():
+    return jsonify(wsgi_minter.blockchain_height())
+
+
 def _get_mint_id():
     """
     Extracts mint id from current request parameters.
@@ -69,6 +74,7 @@ def _get_mint_id():
         abort(400, 'empty mint_id')
 
     return mint_id
+
 
 
 def _get_address():

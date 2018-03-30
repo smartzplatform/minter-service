@@ -88,7 +88,7 @@ class TestMinterService(unittest.TestCase):
 
         tx_hash = token_contract.transact({'from': w3.eth.accounts[0], 'to': self._token_address})\
             .transferOwnership(address)
-        _get_receipt_blocking(tx_hash, w3)
+        _get_receipt_blocking(tx_hash, w3)    
 
 
     def test_3_minting(self):
@@ -138,7 +138,7 @@ class TestMinterService(unittest.TestCase):
         finally:
             minter.close()
 
-
+    
     def test_4_recover_ether(self):
         minter = self.__class__.createMinter()
         w3 = minter.create_web3()
@@ -148,6 +148,15 @@ class TestMinterService(unittest.TestCase):
         self.assertEqual(get_receipt_status(receipt), 1)
 
         self.assertTrue(w3.eth.getBalance(self.__class__.minter_account) < w3.toWei(0.2, 'ether'))
+
+    def test_5_blockchain_height(self):
+        minter = self.__class__.createMinter(False)
+        w3 = minter.create_web3()
+        height = minter.blockchain_height()
+        self.assertTrue(int, type(height))
+        tx_hash = w3.eth.sendTransaction({'from': w3.eth.accounts[0], 'to': self.__class__.minter_account, 'value': w3.toWei(1, 'ether')})
+        _get_receipt_blocking(tx_hash, w3)
+        self.assertLess(height, minter.blockchain_height())
 
 
     def _token_json(self):

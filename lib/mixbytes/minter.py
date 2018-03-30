@@ -39,6 +39,9 @@ class MinterService(object):
                                         self._wsgi_mode_state['account']['password'],
                                         600)
 
+    def blockchain_height(self):
+        return self._w3.eth.blockNumber
+
     def mint_tokens(self, mint_id, address, tokens):
         """
         Mints tokens
