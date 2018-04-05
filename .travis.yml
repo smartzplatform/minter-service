@@ -17,6 +17,20 @@ addons:
       - python3.5-dev
       - python3.5-venv
 
+env:
+  global:
+    # IMAGE_NAME
+    - secure: "hx+wDEMJHh7n7GCDXB2zioX2hWuTLNO770EeOTfuS3Sb/WWFyulcSDLnbkqbFzw1oZzBzOiz6xjeRIUuRykYB7pQTaawS1kipP0TfNa0iPCOuQlNyGKTH5VSf1PCQB8nXPsyBX6MlocW5k8ix79EVCbofBZ3oiFAaVqs/tewEN38hz6natoblvlSj5f71sQLMKHlKOWxgLl9EHGvEVa3AHRfOafjyw3UM8l90h8AhzQSiTEgDia7D6dOMYVaBumsfUYZgSxPyOjpn+0gfvzjzheqyv+E3fLJIP0LH5uRI85TTabTBiHntdAuh3Me98xwphyqX/oEl1WOohGacRXsFZutZenhxeNBIOGWd8O0qXLm02YQTNJJ8gnQpzIpwNB2d3F7pXeB+6yLr8ZxHmAxax9dXvQwcTACghoIiUxGhN4AHl7u0su5BLeurA4OI9qDpQOg2fvFVvbxj5TWqVnReMOXfmKtLPoeVDwsdMYYRrjxk+TfYx14XzptyvJJGFMZ5UA7wtJeQZ0AkerdoiiAtLssTgIsYxQFbXfnwihfDgpAh/xABmSe8R1gm0qZAB9UBTyVkaJZmWbTV9p0Q5rpp+JVbR8vbasUpizhxB2hsSAbLL/I//KXa6MvkhBucli0PACKAtHOlUnDgDbddkSD5oJ7sq9l6BNQ2ihglYdr2qU="
+
+      # AWS_ACCESS_KEY_ID
+    - secure: "wGgxokpxh0qwHWJaOde1TZW2593+RpXP2weqz3C69oODhgsyHj3nTk4VWJur3wvMNhxnR635ZHEdYwqZZL98g93xTULOO2ObxbYuESjHkBMha18+BXNXeeZ72+itZRPi8FiN02vVWd8ahfaNf/UjCqpxg9oAteZI/WWd5BGEl0NmFsXsDF3rGibziPqO+qeM7aYBmcMVRhBOtJicO1dQRmr4GmsnUUxYGmBgJfn5+zM9QrhV6VZd3QfqLSu9DriEDhDOqKy45G4vnoj+jFYKDVhuTgXPS0hFDCWAvjJZ2hCLHb7d+SRAo/Dg0uIyIlavRjWMln/ErAd3yugCEROWpnilHWRbyv4brsSNaBeGb1wcyBZrG57UixmhcV+tJ/USemvvECz3CADxGerk9SOXySq2E+qvOIqp3Pk0o7qrw/v/16HG/kU3QHKN/ukKq5oInXmCMcaqbXSKzTL8nkcTDP5dL0G1v91q4p+LNCdohCoNnaAYErRuajvhLoB5i1VrszFkSL5QqDldwlzSMSmu+edeovIR2fMxcaGoceIXLTFwgxD6s2bhQusn3fhbdNpY/eytywIbbQiS9NRrxvf93Us6XvJtnJvUSDE2sIQOknmXOL/ShhNTvsqiZn26QBpI0ovek6onRyK/tmsVtx78q/Y5HNf73iUdGWM8UYUdJNQ="
+      # AWS_SECRET_ACCESS_KEY
+    - secure: "Stsk3fRArwNzTYncbuee2hHag7AMFo9NAPYtgB9sEAupSYKdCT6jaIVG4+1ZpX4upAr5d5oz7GUD7L+JKBgJahY0RCSCRitsVgT2Z1LoHpImt7rGrfozN7dj4LweLw04K6q7JSDyuLsZMF+GfTT00uplB2F7+mOOtKa6WkP1aSUdXUl73bSWz50Q0fWbPHtMbfNk+xynXFtvQCymw/jZIFwocaDDoLCIMFyFhnSQ6Kii0s7HxuFurPg9p4yoBwyq6Eu9C51wiWvLjllN4w35hwlVJjDf/fPBRklGQ8QUwTjc9seKJRYrcZCTWq4mma9amzTh/EsprboIgnHE9LrFs1ZabL39MrFpf/AH1nwyOpPeYn23BLXO8jxsTdGltKH60D9GEKuzTVvRo+06FtNbRcjJ11kIUihHf4GVvEanKSoPX9upKz0Lc1RNdGQCuy4yq0jE0f06fmjNjt77uYJ0kfG0db6jGnTWGeNtaVAhJLh51mKaLMS2G2I/e2/xUpDG0PJnLtTW9hLHUzqaEHogRMPEUIZl7mzthu/SqARYCy9ZdWcCdTfr9bGDIzxYlVlnbru2+Eiquw1EdbhrTA8iddCr+IdfASkYYoveFkVkYg+7sZooEj3V3hTu10oTL8DDI0CZcLnNe6i62JyB1Qc24fkOASY3Z8Kt4/tpx5rhqh0="
+      # AWS_REGION 
+    - secure: "b8HWipjnAx12GbtvunramgJybyI4tRrrkyepc6UZBjczzwlj0RfUx8NoHJ/IW060ZH6RtVl91kh9LWxEqPp+jv8uO5Um3zYTfsUqX5WXJsWRQhgYCGZVJtOd/ekkwSfN5QETMceniDl/hAKRSnvTwyBoeNfSknfNGZ+0EZPfDnWleWZVYkPryoIPsapjLPTaIBKDqIiuzUD8ygIPQK8jC5+hoJagI3m0IvHDwdYTr8r0/i4lHLX9cMnAB9QmpzfBp9nM0Z+v08VJ+1RB62flIMRoEgmEWBGm7dOhCdD/9RYoaGcXF5x3cNgD2cJ+dykImFi8tTqEYI8PWZ7ZHB/Dghqi6dNWB7a7b4wrmQiC1pfPt8YmYTdoIMPvauZ3vtPcflmwYbDTkd1EqgZoj7noPfNPKAGxFkDHHbI+aAf3l8Uk/BmyhfmIgoVoLGYWO8BORY6DrUAikJ9LH/ef7/bvXpMQD2R/z2rZIeIGkv6ZhvHbfeADzepljsF1VyJTZqIUB3Z+K6tLKPTI68xBnd+86Zhaj081ULrbdrWfRSKeuKPq0CvFv7RVoCO/MEZHkHxghiegVsTJT4pzoZgUBolz9OCstcJc8E1QJ9QZoMt3bqo/ZYspB/PoZlv1oD7aX0XwFYXJH9+kVDJA83rCDAlEM+rjRfDQttEGNkyXGcuzseQ="
+      # AWS_REGISTRY
+    - secure: "GzlDFclhIoxGiy0RNsiVf2K2YUkQn+WcQbOLIqHkUdM9O6Ks2jV01icI3IBMzjclET8/YQI0I7E/fjT4JgXkDPeypEaAePcn3wR0nn5de42AeK76bbv7lOMIJYFDwuOlq5YvRbzOdwYKY4k14Ff1juivnRC2pEA30puHfgg9jk4U42WjIoPz/JR6jQ+BuO+Tfl9YZVSv9AuLoMGrQt8QbAGx57bnGHyBbfPEMp4zVVLDlXET+v7oqEvcx3IhkLnwo24Zt+LMv1b3LwWi4orMYz7uOsHkqqOZ88KLeK7VgoJ80z8pSKYrlfeRVLWRquJaK2hNPYD8hdt6rPUVpc1pt/cXwSqXPvipa6JQgoVbsmK9seS2rJ7Eoqi0PoAjLeLlzRpy9K4HuMns65zr6QQdzrrkscUYMjxt+U6xBqZxe3WiG048tP545dJSp47+4KhSGJjN5AkVkBLMD55B73Pid8RP0JrGa7618tJZpak4xlug3Sqw3S5jnNq+KayF7ywspxBgkCbjuoYFLDeJ5jWpipqjm7kEi0fDqqCi3MYhtYtA7mPNauBQ+TfUq9CxXCpTM7oElYlSKTAweBjxM7I+4Petx6UqPbTDgurQmTgGrvJOy3K5l6jrWgxHQ0Kxp+driKrih9SiAZJljdfN2glqf8LR8i9DkQrQ1OKZX+OY45o="
+
 install:
   - python3.5 -m venv .venv
   - ./.venv/bin/pip3 install -r requirements.txt
@@ -32,6 +46,13 @@ script:
   - ./node_modules/.bin/truffle test
   - source .venv/bin/activate
   - ./test/i/run.sh
+  - sudo curl -o /usr/local/bin/ecs-cli https://s3.amazonaws.com/amazon-ecs-cli/ecs-cli-linux-amd64-latest
+  - sudo chmod +x /usr/local/bin/ecs-cli
+  - ecs-cli configure profile --profile-name travis --access-key $AWS_ACCESS_KEY_ID --secret-key $AWS_SECRET_ACCESS_KEY
+  - /bin/bash .registry/label_containers.sh || exit 1
+  - docker build -t $IMAGE_NAME . || exit 1
+  - /bin/bash .registry/upload_to_registry.sh $IMAGE_NAME
+  
 
 notifications:
   email:

@@ -13,7 +13,6 @@ RUN npm install --prefix /app --only=dev
 
 COPY ./ /app
 
-RUN ./bin/test_wrapper.sh 
 RUN rm -f ./bin/test_wrapper.sh
 RUN ./bin/deploy /deploy
 
